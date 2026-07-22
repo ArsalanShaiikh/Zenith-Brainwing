@@ -1,0 +1,272 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   Fonts — GT Ultra, Grilli Type, licensed to the client.
+   Median is the interface face; Fine is the serif cut, kept for
+   the wordmark and figures.
+   ============================================================ */
+
+@font-face {
+  font-family: 'GT Ultra Median';
+  src: url('./assets/fonts/GTUltraMedian-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GT Ultra Median';
+  src: url('./assets/fonts/GTUltraMedian-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GT Ultra Median';
+  src: url('./assets/fonts/GTUltraMedian-RegularItalic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GT Ultra Median';
+  src: url('./assets/fonts/GTUltraMedian-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GT Ultra Fine';
+  src: url('./assets/fonts/GTUltraFine-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GT Ultra Fine';
+  src: url('./assets/fonts/GTUltraFine-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================
+   Theme
+   ============================================================ */
+
+@theme {
+  /* Breakpoints. sm is declared explicitly rather than inherited so the
+     whole scale reads from one place. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2560px;
+  --breakpoint-5xl: 3840px;
+
+  /* Palette. Brass is sampled from the Runwal monogram on the MahaRERA
+     floor plates — olive-leaning, not champagne. */
+  --color-paper: #f4f1ea;
+  --color-paper-2: #eae5da;
+  --color-paper-3: #ded7c8;
+  --color-ink: #1a1714;
+  --color-ink-2: #4d463d;
+  /* Darkened from #857c6e, which measured 3.64:1 on paper — under AA, and it
+     carries 9–11px secondary labels that need more contrast, not less. It is
+     darker still than AA strictly needs on paper so it also clears on the
+     translucent glass panels, where the plate behind lifts the background. */
+  --color-ink-3: #5a5346;
+  /* Brand brass, for rules and fills. As *text* it measured 3.02:1 on paper,
+     so brass-ink is the darker cut used wherever it sets type on a light
+     surface; brass-lift is its counterpart on dark, lightened until it
+     cleared AA against the brightest plate showing through the glass. */
+  --color-brass: #a28a00;
+  --color-brass-ink: #5f5100;
+  --color-brass-lift: #d9c158;
+  --color-void: #0b0a08;
+  --color-hair: rgb(26 23 20 / 0.14);
+  --color-hair-dark: rgb(244 241 234 / 0.16);
+
+  --font-ui: 'GT Ultra Median', 'Helvetica Neue', Arial, sans-serif;
+  --font-fine: 'GT Ultra Fine', 'Times New Roman', serif;
+
+  --ease-zenith: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --radius-plate: 6px;
+  --radius-tile: 3px;
+}
+
+/* Height-based variants. The app is locked to the viewport, so a short
+   window is as much a layout constraint as a narrow one — Tailwind ships
+   no max-height variants, so they are declared here.
+   `short`  — landscape phones, small laptops.
+   `stubby` — the extreme case, e.g. 390px tall. */
+@custom-variant short (@media (max-height: 620px));
+@custom-variant stubby (@media (max-height: 460px));
+/* Coarse pointers get no hover affordances. */
+@custom-variant touch (@media (hover: none));
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-void);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    font-weight: 400;
+    /* The app owns every gesture; the document must never pan. */
+    touch-action: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-brass);
+    outline-offset: 3px;
+  }
+}
+
+/* ============================================================
+   Semantic utilities — type ramps and the two repeating chrome
+   pieces. Declared as @utility so they compose with every
+   variant (md:, short:, hover:) like any core utility.
+   ============================================================ */
+
+/* Display and heading sizes key off min(vw, vh): on a 390px-tall laptop a
+   width-only clamp overflows the frame. */
+@utility t-display {
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: clamp(34px, min(5vw, 8vh), 76px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+}
+
+@utility t-h2 {
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: clamp(20px, min(2.6vw, 4vh), 40px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+@utility t-label {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility t-fig {
+  font-family: var(--font-fine);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Opaque paper card. The workhorse container — solid, never translucent. */
+@utility card {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-radius: var(--radius-plate);
+  box-shadow: 0 18px 50px -20px rgb(0 0 0 / 0.5);
+}
+
+/* Frosted panel — light, and genuinely thin.
+   The trick is brightness() inside backdrop-filter: it lifts the blurred
+   backdrop *before* the tint lands. Without it a pale tint over this dark
+   imagery has to reach ~0.86 alpha to stay light, at which point it is 86%
+   paint and nothing shows through. Lifting the backdrop first means a ~0.5
+   tint reads light while still carrying the plate's shapes and colour
+   through it. Contents stay on the ink scale.
+   0.66 / brightness 3.8 came out of a sweep: it holds the panel at ~62%
+   luminance with the small labels at 4.85:1, while keeping the backdrop
+   variation across the panel near its peak (0.199). Pushing lighter than
+   this starts trading away the very transparency it is here for. */
+@utility glass {
+  background: rgb(252 250 246 / 0.66);
+  backdrop-filter: blur(24px) brightness(3.8) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) brightness(3.8) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.55);
+  border-radius: var(--radius-plate);
+  box-shadow:
+    0 26px 60px -24px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+}
+
+/* No backdrop-filter means no brightness lift either, so the tint alone has
+   to keep the panel light. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: rgb(246 243 237 / 0.93);
+  }
+}
+
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding-inline: 12px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Film grain. A data-URI turbulence tile stepped at 8fps — cheap, and the
+   one texture that stops the flat areas reading as vector-flat. */
+@utility grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  animation: grain-shift 0.8s steps(5) infinite;
+}
+
+@keyframes grain-shift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-20%, -20%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain {
+    animation: none;
+  }
+}
+
+/* Screen-reader-only. */
+@utility sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

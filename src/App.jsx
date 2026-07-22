@@ -1,38 +1,45 @@
-import { useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { ViewProvider } from './context/ViewContext'
-import { useView } from './hooks/useView'
-import Preloader from './components/Preloader'
+import { VIEWS } from './lib/views'
+import Landing from './components/Landing'
+import Menu from './components/Menu'
 import Shell from './components/Shell'
 
-import './styles/tokens.css'
-import './styles/base.css'
-import './views/views.css'
-
 /**
- * The shell mounts immediately and sits under the preloader curtain, so the
- * home plate and fonts are already painted when the panel lifts. `ready`
- * gates the Observer and keyboard so nothing can drive the machine early.
+ * Routes are the single source of truth for where you are:
+ *   /            landing gate
+ *   /menu        destination menu
+ *   /:viewId     the app, showing that panel
+ *
+ * The shell only mounts on a view route. That is deliberate — keeping it
+ * mounted under the menu is what used to let the previously-open panel show
+ * through during the hand-over.
  */
-const Stage = () => {
-  const { setReady } = useView()
-  const [curtain, setCurtain] = useState(true)
+const AppRoutes = () => {
+  const navigate = useNavigate()
 
   return (
-    <>
-      <Shell />
-      {curtain && (
-        <Preloader
-          onReveal={() => setReady(true)}
-          onFinish={() => setCurtain(false)}
+    <Routes>
+      <Route path="/" element={<Landing onEnter={() => navigate('/menu')} />} />
+      <Route
+        path="/menu"
+        element={<Menu onPick={(id) => navigate(`/${id}`)} />}
+      />
+      {VIEWS.map((v) => (
+        <Route
+          key={v.id}
+          path={`/${v.id}`}
+          element={<Shell viewId={v.id} onMenu={() => navigate('/menu')} />}
         />
-      )}
-    </>
+      ))}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
 const App = () => (
   <ViewProvider>
-    <Stage />
+    <AppRoutes />
   </ViewProvider>
 )
 

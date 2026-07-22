@@ -19,6 +19,26 @@ export const ViewProvider = ({ children }) => {
   const activeRef = useRef(0)
   const timerRef = useRef(null)
 
+  /**
+   * Set a view with no choreography at all. Used when arriving from the menu:
+   * the panel is still covering the screen, so playing a 1150ms transition
+   * from whatever was last open only shows the user the page they didn't ask
+   * for. prevView stays null, which is the signal MediaLayer reads as
+   * "first paint" — it snaps the plate rather than wiping to it.
+   */
+  const jumpToView = useCallback((next) => {
+    if (!Number.isInteger(next) || next < 0 || next >= VIEWS.length) return
+    clearTimeout(timerRef.current)
+    lockRef.current = false
+    activeRef.current = next
+    setState({
+      activeView: next,
+      prevView: null,
+      direction: 1,
+      isTransitioning: false,
+    })
+  }, [])
+
   const goToView = useCallback((next) => {
     if (lockRef.current) return false
     if (!Number.isInteger(next)) return false
@@ -54,12 +74,13 @@ export const ViewProvider = ({ children }) => {
       ready,
       setReady,
       goToView,
+      jumpToView,
       next,
       prev,
       lockRef,
       activeRef,
     }),
-    [state, ready, goToView, next, prev],
+    [state, ready, goToView, jumpToView, next, prev],
   )
 
   return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>
