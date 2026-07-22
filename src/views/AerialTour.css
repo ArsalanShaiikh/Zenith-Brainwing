@@ -1,0 +1,83 @@
+.aer {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.aer__intro {
+  max-width: 24ch;
+  align-self: start;
+  padding-top: clamp(4px, 3vh, 40px);
+}
+
+.aer__stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  /* Pull the target area wide so the magnetic pull has room to read. */
+  margin: calc(var(--pad-y) * -1) calc(var(--pad-x) * -1);
+}
+
+.aer__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(150px, min(22vw, 34vh), 240px);
+  aspect-ratio: 1;
+  will-change: transform;
+}
+
+.aer__ring {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: aer-spin 20s linear infinite;
+}
+
+.aer__ring.is-still {
+  animation: none;
+}
+
+.aer__ring-text {
+  font-family: var(--f-num);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  fill: var(--bone);
+  text-transform: uppercase;
+}
+
+@keyframes aer-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aer__arrow {
+  position: absolute;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--bone);
+  transition: transform 0.45s var(--ease-zenith);
+}
+
+.aer__btn:hover .aer__arrow {
+  transform: translate(3px, -3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aer__ring {
+    animation: none;
+  }
+}
+
+@media (max-height: 620px) {
+  .aer__intro {
+    padding-top: 0;
+  }
+
+  .aer__btn {
+    width: clamp(110px, 26vh, 150px);
+  }
+}

@@ -1,0 +1,59 @@
+.pre {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.pre__panel {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  clip-path: inset(0% 0% 0% 0%);
+  display: grid;
+  align-content: center;
+  padding: 0 var(--pad-x);
+}
+
+.pre__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.28em;
+  max-width: 18ch;
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: clamp(26px, min(4.4vw, 6vh), 36px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+}
+
+.pre__mask {
+  display: block;
+  overflow: hidden;
+}
+
+.pre__word {
+  display: block;
+}
+
+.pre__counter {
+  position: absolute;
+  right: var(--pad-x);
+  bottom: clamp(28px, 5vh, 48px);
+  font-family: var(--f-num);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--bone-dim);
+}
+
+.pre__rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--bone);
+  transform: scaleX(0);
+  transform-origin: left;
+}

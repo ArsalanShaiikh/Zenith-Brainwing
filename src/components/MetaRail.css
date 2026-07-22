@@ -1,0 +1,50 @@
+.meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  height: var(--rail-h);
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 2vw, 30px);
+  padding: 0 var(--pad-x);
+  color: var(--bone-dim);
+}
+
+.meta__item {
+  position: relative;
+  white-space: nowrap;
+}
+
+.meta__item + .meta__item::before {
+  content: '';
+  position: absolute;
+  left: clamp(-15px, -1vw, -7px);
+  top: 50%;
+  width: 1px;
+  height: 9px;
+  margin-top: -4.5px;
+  background: var(--line);
+}
+
+@media (max-width: 700px) {
+  .meta__item:not(.meta__item--rera) {
+    display: none;
+  }
+
+  .meta__item + .meta__item::before {
+    display: none;
+  }
+}
+
+/* Short viewports collapse to the RERA number alone. */
+@media (max-height: 620px) {
+  .meta__item:not(.meta__item--rera) {
+    display: none;
+  }
+
+  .meta__item + .meta__item::before {
+    display: none;
+  }
+}

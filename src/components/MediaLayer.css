@@ -1,0 +1,51 @@
+.media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--ink);
+}
+
+.media__plate {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.media__plate picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+}
+
+/* Keeps the type legible over any plate without dimming the photography.
+   Must out-rank the plates: the transition assigns them inline z-index 1/2,
+   so an auto-stacked scrim would paint underneath the incoming image. */
+.media__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background:
+    linear-gradient(
+      to right,
+      rgba(10, 14, 19, 0.88) 0%,
+      rgba(10, 14, 19, 0.62) 34%,
+      rgba(10, 14, 19, 0.24) 62%,
+      rgba(10, 14, 19, 0.32) 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(10, 14, 19, 0.8) 0%,
+      rgba(10, 14, 19, 0.18) 32%,
+      rgba(10, 14, 19, 0.1) 62%,
+      rgba(10, 14, 19, 0.6) 100%
+    );
+}
