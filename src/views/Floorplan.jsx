@@ -78,8 +78,8 @@ const Floorplan = ({ active }) => {
                     'flex w-full flex-col gap-px whitespace-nowrap rounded-tile px-3 py-1.5 text-left transition-colors duration-200',
                     'lg:rounded-none lg:border-l-2 lg:px-4 lg:py-1.5 3xl:py-2',
                     on
-                      ? 'bg-paper-2 text-ink lg:border-brass'
-                      : 'text-ink-2 hover:bg-paper-2 lg:border-transparent',
+                      ? 'bg-ink/8 text-ink lg:border-brass'
+                      : 'text-ink-2 hover:bg-ink/6 lg:border-transparent',
                   ].join(' ')}
                 >
                   <span className={`text-[12px] lg:text-[13px] ${on ? 'font-normal' : 'font-light'}`}>
@@ -124,7 +124,7 @@ const Floorplan = ({ active }) => {
         ref={sheetRef}
         data-reveal-figure
         data-plan-sheet
-        className="card m-0 grid min-h-0 grid-rows-[minmax(0,1fr)] bg-paper p-2.5 md:p-4 lg:p-4 3xl:p-6"
+        className="card m-0 grid min-h-0 grid-rows-[minmax(0,1fr)] p-2.5 md:p-4 lg:p-4 3xl:p-6"
       >
         <picture className="block h-full min-h-0 w-full min-w-0">
           <source
