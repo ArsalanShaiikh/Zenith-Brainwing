@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef, useState,useEffect } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { VIEWS } from '../lib/views'
 import { srcSet, fallbackSrc } from '../lib/images'
 import Logo from './Logo'
+import { client } from "../sanity/client";
+import { urlFor } from "../sanity/image";
 
 const META = {
   views: { blurb: 'Four vantages, ground to crown', stat: '168 m' },
@@ -27,6 +29,21 @@ const Menu = ({ onPick }) => {
   const rowRefs = useRef([])
   const plateRefs = useRef([])
   const [hot, setHot] = useState(0)
+
+  const [homepage, setHomepage] = useState(null);
+
+useEffect(() => {
+  client
+    .fetch(`*[_type=="zenithSite"][0]{homepage}`)
+    .then((data) => {
+      console.log("DATA:", data);
+      console.log("HOMEPAGE:", data.homepage);
+      console.log("BACKGROUND:", data.homepage?.backgroundImage);
+
+      setHomepage(data.homepage);
+    })
+    .catch((err) => console.error(err));
+}, []);
 
   // Entrance. The paper cover is inherited from the landing gate and wiped
   // off here, so the hand-over reads as one continuous surface rather than a
@@ -119,18 +136,33 @@ const Menu = ({ onPick }) => {
               className="absolute inset-0 m-0"
               style={{ opacity: i === 0 ? 1 : 0 }}
             >
-              <picture className="block h-full w-full">
-                <source type="image/avif" srcSet={srcSet(v.img, 'avif')} sizes="100vw" />
-                <source type="image/webp" srcSet={srcSet(v.img, 'webp')} sizes="100vw" />
-                <img
-                  className="h-full w-full object-cover"
-                  src={fallbackSrc(v.img)}
-                  srcSet={srcSet(v.img, 'jpg')}
-                  sizes="100vw"
-                  alt=""
-                  decoding="async"
-                />
-              </picture>
+             {v.id === "views" && homepage?.backgroundImage ? (
+  <img
+    className="h-full w-full object-cover"
+    src={urlFor(homepage.backgroundImage).url()}
+    alt=""
+    decoding="async"
+  />
+) : (
+  <picture className="block h-full w-full">
+    <source
+      type="image/avif"
+      srcSet={srcSet(v.img, "avif")}
+      sizes="100vw"
+    />
+    <source
+      type="image/webp"
+      srcSet={srcSet(v.img, "webp")}
+      sizes="100vw"
+    />
+    <img
+      className="h-full w-full object-cover"
+      src={fallbackSrc(v.img)}
+      alt=""
+      decoding="async"
+    />
+  </picture>
+)}
             </figure>
           ))}
           <div className="absolute inset-0 z-4 bg-[#33404d] opacity-55 mix-blend-multiply" />

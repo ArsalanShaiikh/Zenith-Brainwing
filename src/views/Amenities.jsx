@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 import { srcSet, fallbackSrc } from '../lib/images'
+import { client } from "../sanity/client";
+import { urlFor } from "../sanity/image";
 
 /** `short` marks the three tiles that survive the short-viewport cut. */
 const TILES = [
@@ -19,10 +21,31 @@ const TILES = [
 ]
 
 const Amenities = ({ active }) => {
+
   const rootRef = useRef(null)
   const boxRef = useRef(null)
   const boxImgRef = useRef(null)
-  const [open, setOpen] = useState(null)
+  const [open, setOpen] = useState(null);
+const [amenityData, setAmenityData] = useState(null);
+const [galleryIndex, setGalleryIndex] = useState(0);
+
+const tiles = TILES.map((tile, index) => ({
+  ...tile,
+  ...(amenityData?.amenities?.[index] || {}),
+}));
+
+useEffect(() => {
+  client
+    .fetch(`
+      *[_type=="zenithSite"][0]{
+        amenities
+      }
+    `)
+    .then((data) => {
+      setAmenityData(data?.amenities ?? null);
+    })
+    .catch(console.error);
+}, []);
 
   useViewReveal(active, rootRef)
   const { contextSafe } = useGSAP({ scope: rootRef })
@@ -31,6 +54,8 @@ const Amenities = ({ active }) => {
     (dir) => setOpen((n) => (n === null ? n : (n + dir + TILES.length) % TILES.length)),
     [setOpen],
   )
+    
+ 
 
   // eslint-disable-next-line react-hooks/refs
   const animateSwap = contextSafe(() => {
@@ -39,6 +64,8 @@ const Amenities = ({ active }) => {
     gsap.set(img, { opacity: 0, scale: 1.04 })
     gsap.to(img, { opacity: 1, scale: 1, duration: 0.7, ease: 'zenith' })
   })
+
+
 
   // Capture phase, so the view Observer never sees these while open.
   useEffect(() => {
@@ -73,7 +100,32 @@ const Amenities = ({ active }) => {
 
   useGSAP(() => animateSwap(), { dependencies: [open], scope: rootRef })
 
-  const cur = open === null ? null : TILES[open]
+ 
+
+const cur = open === null ? null : tiles[open];
+
+const gallery =
+  cur?.gallery && cur.gallery.length > 0
+    ? cur.gallery
+    : cur?.coverImage
+    ? [cur.coverImage]
+    : [];
+
+const prevImage = () => {
+  if (!gallery.length) return;
+
+  setGalleryIndex((prev) =>
+    prev === 0 ? gallery.length - 1 : prev - 1
+  );
+};
+
+const nextImage = () => {
+  if (!gallery.length) return;
+
+  setGalleryIndex((prev) =>
+    prev === gallery.length - 1 ? 0 : prev + 1
+  );
+};
 
   const iconBtn = [
     'grid place-items-center rounded-full bg-paper text-ink',
@@ -101,11 +153,14 @@ const Amenities = ({ active }) => {
       </div>
 
       <div className="grid min-h-0 grid-cols-12 grid-rows-8 gap-1.5 md:grid-rows-6 md:gap-2 lg:grid-rows-8 lg:gap-2.5 short:grid-rows-4">
-        {TILES.map((t, i) => (
+        {tiles.map((t, i) => (
           <button
             key={t.id}
             type="button"
-            onClick={() => setOpen(i)}
+            onClick={() => {
+  setOpen(i);
+  setGalleryIndex(0);
+}}
             data-amen-tile={t.id}
             data-reveal-figure
             className={[
@@ -114,19 +169,17 @@ const Amenities = ({ active }) => {
               t.short ? '' : 'short:hidden',
             ].join(' ')}
           >
-            <picture className="block h-full w-full">
-              <source type="image/avif" srcSet={srcSet(t.img, 'avif')} sizes="(max-width:768px) 60vw, 34vw" />
-              <source type="image/webp" srcSet={srcSet(t.img, 'webp')} sizes="(max-width:768px) 60vw, 34vw" />
-              <img
-                className="h-full w-full object-cover transition-transform duration-900 ease-zenith group-hover:scale-[1.045]"
-                src={fallbackSrc(t.img)}
-                srcSet={srcSet(t.img, 'jpg')}
-                sizes="(max-width:768px) 60vw, 34vw"
-                alt={`${t.name} — ${t.sub}`}
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
+     <img
+  className="h-full w-full object-cover transition-transform duration-900 ease-zenith group-hover:scale-[1.045]"
+  src={
+    t.coverImage
+      ? urlFor(t.coverImage).url()
+      : fallbackSrc(t.img)
+  }
+  alt={t.title || t.name}
+  loading="lazy"
+  decoding="async"
+/>
 
             {/* Solid paper caption. Touch has no hover, so it sits open there. */}
             <span
@@ -142,9 +195,9 @@ const Amenities = ({ active }) => {
               ].join(' ')}
             >
               <span className="text-[11px] font-normal leading-tight md:text-[13px]">
-                {t.name}
+                {t.title || t.name}
               </span>
-              <span className="t-label hidden text-ink-3 md:block">{t.sub}</span>
+              <span className="t-label hidden text-ink-3 md:block">{t.description || t.sub}</span>
             </span>
 
             <span className="chip absolute right-2 top-2 hidden h-[22px] px-2 text-[9px] text-ink-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:flex">
@@ -162,29 +215,26 @@ const Amenities = ({ active }) => {
           ref={boxRef}
           role="dialog"
           aria-modal="true"
-          aria-label={cur ? `${cur.name}, ${cur.sub}` : 'Image viewer'}
+          aria-label={cur ? `${cur.title || cur.name}, ${cur.description || cur.sub}` : "Image viewer"}
           hidden={open === null}
           className="fixed inset-2 z-100 overflow-hidden rounded-plate bg-void sm:inset-2.5 lg:inset-3 3xl:inset-4"
         >
           {cur && (
             <>
-              <picture className="block h-full w-full">
-                <source type="image/avif" srcSet={srcSet(cur.img, 'avif')} sizes="100vw" />
-                <source type="image/webp" srcSet={srcSet(cur.img, 'webp')} sizes="100vw" />
-                <img
-                  ref={boxImgRef}
-                  className="h-full w-full object-cover"
-                  src={fallbackSrc(cur.img)}
-                  srcSet={srcSet(cur.img, 'jpg')}
-                  sizes="100vw"
-                  alt={`${cur.name} — ${cur.sub}`}
-                  decoding="async"
-                />
-              </picture>
+                 <img
+  ref={boxImgRef}
+  className="h-full w-full object-cover"
+  src={
+    gallery.length
+      ? urlFor(gallery[galleryIndex]).url()
+      : fallbackSrc(cur.img)
+  }
+  alt={cur?.title || cur?.name}
+/>
 
               <button
                 type="button"
-                onClick={() => step(-1)}
+                onClick={prevImage}
                 aria-label="Previous image"
                 className={`${iconBtn} absolute left-3 top-1/2 z-2 h-11 w-11 -translate-y-1/2 md:left-6 md:h-12 md:w-12`}
               >
@@ -194,7 +244,7 @@ const Amenities = ({ active }) => {
               </button>
               <button
                 type="button"
-                onClick={() => step(1)}
+                onClick={nextImage}
                 aria-label="Next image"
                 className={`${iconBtn} absolute right-3 top-1/2 z-2 h-11 w-11 -translate-y-1/2 md:right-6 md:h-12 md:w-12`}
               >
@@ -215,13 +265,13 @@ const Amenities = ({ active }) => {
 
               <div className="absolute bottom-3 left-3 z-2 flex flex-col gap-0.5 rounded-plate bg-paper px-3.5 py-2.5 text-ink md:bottom-6 md:left-6 md:px-4 md:py-3">
                 <span className="text-[15px] font-normal leading-tight md:text-[17px]">
-                  {cur.name}
+                  {cur.title || cur.name}
                 </span>
                 <span className="t-label text-ink-3">
-                  {cur.sub} &middot; {cur.level}
+                  {cur.description || cur.sub} &middot; {cur.level}
                 </span>
                 <span className="t-fig mt-1 text-[10px] tracking-widest text-brass">
-                  {String(open + 1).padStart(2, '0')} / {String(TILES.length).padStart(2, '0')}
+                  {String(galleryIndex + 1).padStart(2, "0")} / {String(gallery.length).padStart(2, "0")}
                 </span>
               </div>
             </>

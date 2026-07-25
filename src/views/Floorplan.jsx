@@ -1,26 +1,51 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { client } from '../sanity/client'
+import { urlFor } from '../sanity/image'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 
 /** Areas transcribed from the MahaRERA-stamped sheets. */
-const PLANS = [
-  { id: 'unit-1', name: 'Unit 1', type: '3 BHK', carpet: '1097', balcony: '81', total: '1178' },
-  { id: 'unit-2', name: 'Unit 2', type: '3 BHK', carpet: '1068', balcony: '110', total: '1178' },
-  { id: 'unit-3', name: 'Unit 3', type: '3 BHK', carpet: '1017', balcony: '96', total: '1113' },
-  { id: 'unit-4', name: 'Unit 4', type: '3 BHK', carpet: '1071', balcony: '107', total: '1178' },
-  { id: 'unit-5', name: 'Unit 5', type: '3 BHK', carpet: '1030', balcony: '83', total: '1113' },
-  { id: 'unit-6', name: 'Unit 6', type: '3 BHK', carpet: '1080', balcony: '98', total: '1178' },
-  { id: 'jodi-1', name: 'Jodi 01–02', type: 'Combined', carpet: '2178', balcony: '191', total: '2369' },
-  { id: 'jodi-2', name: 'Jodi 04–05', type: 'Combined', carpet: '2101', balcony: '190', total: '2291' },
-  { id: 'typical', name: 'Typical plate', type: 'Full floor', carpet: '—', balcony: '—', total: '—' },
-]
 
-const src = (id, ext, w) => `/img/plans/${id}-${w}.${ext}`
+
 
 const Floorplan = ({ active }) => {
   const rootRef = useRef(null)
   const sheetRef = useRef(null)
   const [i, setI] = useState(0)
+  const [plans, setPlans] = useState([])
+const [heading, setHeading] = useState("")
+const [title, setTitle] = useState("")
+
+useEffect(() => {
+  client
+    .fetch(`
+      *[_type=="zenithSite"][0]{
+        floorplan{
+          heading,
+          description,
+        plans[]{
+  _key,
+  name,
+  subtitle,
+  reraCarpet,
+  balcony,
+  totalArea,
+  image{
+    asset->
+  }
+}
+        }
+      }
+    `)
+    
+    .then((data) => {
+  console.log(data.floorplan.plans);
+  setHeading(data.floorplan.heading);
+  setTitle(data.floorplan.description);
+  setPlans(data.floorplan.plans || []);
+})
+}, [])
+
 
   useViewReveal(active, rootRef)
   const { contextSafe } = useGSAP({ scope: rootRef })
@@ -34,13 +59,18 @@ const Floorplan = ({ active }) => {
     gsap.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'zenith' })
   })
 
-  const cur = PLANS[i]
+  const cur = plans[i]
+  console.log("Selected plan:", cur);
+  if (!cur) return null;
 
-  const SPECS = [
-    ['RERA carpet', cur.carpet],
-    ['Balcony', cur.balcony],
-    ['Total', cur.total],
-  ]
+const SPECS = [
+  ['RERA Carpet', cur.reraCarpet],
+  ['Balcony', cur.balcony],
+  ['Total', cur.totalArea],
+]
+
+console.log(cur.image);
+console.log(cur.image?.asset);
 
   return (
     <div
@@ -54,22 +84,22 @@ const Floorplan = ({ active }) => {
       >
         <div className="flex flex-col gap-1.5 border-b border-hair px-4 py-2.5 lg:px-4 lg:py-3.5">
           <p className="t-label flex items-center gap-2 text-ink-3 before:h-px before:w-3.5 before:bg-brass before:content-['']">
-            04 &middot; Floorplan
+           {heading}
           </p>
           <h2
             data-view-heading
             tabIndex={-1}
             className="t-h2 hidden outline-none lg:block short:lg:hidden"
           >
-            Nine plates
+            {title}
           </h2>
         </div>
 
         <ul className="flex shrink-0 gap-1.5 overflow-x-auto overscroll-contain p-2 lg:min-h-0 lg:flex-col lg:gap-0 lg:overflow-y-auto lg:p-0 lg:py-1.5">
-          {PLANS.map((p, n) => {
+          {plans.map((p, n) => {
             const on = n === i
             return (
-              <li key={p.id} className="shrink-0 lg:shrink lg:w-full">
+              <li key={p._key} className="shrink-0 lg:shrink lg:w-full">
                 <button
                   type="button"
                   onClick={() => pick(n)}
@@ -85,7 +115,7 @@ const Floorplan = ({ active }) => {
                   <span className={`text-[12px] lg:text-[13px] ${on ? 'font-normal' : 'font-light'}`}>
                     {p.name}
                   </span>
-                  <span className="t-label text-[9px] text-ink-3">{p.type}</span>
+                  <span className="t-label text-[9px] text-ink-3">{p.subtitle}</span>
                 </button>
               </li>
             )
@@ -127,21 +157,15 @@ const Floorplan = ({ active }) => {
         className="card m-0 grid min-h-0 grid-rows-[minmax(0,1fr)] bg-paper p-2.5 md:p-4 lg:p-4 3xl:p-6"
       >
         <picture className="block h-full min-h-0 w-full min-w-0">
-          <source
-            type="image/webp"
-            srcSet={`${src(cur.id, 'webp', 960)} 960w, ${src(cur.id, 'webp', 1600)} 1600w`}
-            sizes="(max-width:1024px) 92vw, 62vw"
-          />
-          <img
-            data-plan-img
-            className="h-full w-full object-contain"
-            src={src(cur.id, 'jpg', 1600)}
-            srcSet={`${src(cur.id, 'jpg', 960)} 960w, ${src(cur.id, 'jpg', 1600)} 1600w`}
-            sizes="(max-width:1024px) 92vw, 62vw"
-            alt={`${cur.name} floor plan, ${cur.type}`}
-            decoding="async"
-            loading="lazy"
-          />
+      <div className="relative w-full h-full overflow-hidden rounded-lg bg-white">
+  <img
+    src={urlFor(cur.image).width(1600).url()}
+    alt={cur.name}
+    className="w-full h-full object-contain"
+  />
+</div>
+
+
         </picture>
       </figure>
     </div>
