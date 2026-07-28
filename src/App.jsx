@@ -20,10 +20,18 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing onEnter={() => navigate('/menu')} />} />
+      <Route
+        path="/"
+        element={
+          <Landing
+            onEnter={() => navigate('/menu')}
+            onEnterView={(id) => navigate(`/${id}`)}
+          />
+        }
+      />
       <Route
         path="/menu"
-        element={<Menu onPick={(id) => navigate(`/${id}`)} onHome={() => navigate('/')} />}
+        element={<Menu onPick={(id) => navigate(`/${id}`)} />}
       />
       {VIEWS.map((v) => (
         <Route

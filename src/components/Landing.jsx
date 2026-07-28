@@ -51,6 +51,30 @@ const LABEL_SPOTS = HOTSPOTS.filter((h) => h.label)
 const overlayForFrame = (frame) =>
   HOTSPOTS.find((h) => h.frame === frame && h.overlay) ?? null
 
+/** The tower-click quick-preview — a static teaser, ahead of the full,
+ *  CMS-driven Floorplan view (which lets you pick a specific unit). The
+ *  building overlay's plates are individually clickable, one per floor (see
+ *  `.floor-overlay .cls-1` in index.css) — this table buckets a plate's
+ *  position, top to bottom, into the plan that floor band would show. */
+const FLOOR_TYPE_PLANS = [
+  { name: 'Duplex Jodi — Penthouse', subtitle: 'Top floors, combined units', base: '/img/plans/jodi-2' },
+  { name: 'Jodi — 3 BHK combined', subtitle: 'Upper floors', base: '/img/plans/jodi-1' },
+  { name: 'Unit 4 — 3 BHK', subtitle: 'High floors', base: '/img/plans/unit-4' },
+  { name: 'Unit 3 — 3 BHK', subtitle: 'Upper-mid floors', base: '/img/plans/unit-3' },
+  { name: 'Unit 2 — 3 BHK', subtitle: 'Mid floors', base: '/img/plans/unit-2' },
+  { name: 'Unit 1 — 3 BHK', subtitle: 'Lower-mid floors', base: '/img/plans/unit-1' },
+  { name: 'Typical Floor Plan', subtitle: 'Every standard floor', base: '/img/plans/typical' },
+]
+/** Bucket a plate's rank (0 = topmost floor) among `count` plates into one of
+ *  the plans above. */
+const planForPlateRank = (rank, count) => {
+  const bucket = Math.min(
+    FLOOR_TYPE_PLANS.length - 1,
+    Math.floor((rank / Math.max(count, 1)) * FLOOR_TYPE_PLANS.length),
+  )
+  return FLOOR_TYPE_PLANS[bucket]
+}
+
 /** The image's on-screen rect in CSS px — the same cover-crop the canvas paints
  *  with. Everything pinned to the tower maps through this. */
 const coverRectFrom = (cv) => {
@@ -213,7 +237,7 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
  * frames there at a fixed 24fps, so every turn is identically paced. A press on
  * "Enter" wipes paper over the orbit and hands the surface to the menu.
  */
-const Landing = ({ onEnter }) => {
+const Landing = ({ onEnter, onEnterView }) => {
   const rootRef = useRef(null)
   const canvasRef = useRef(null)
   const loaderRef = useRef(null)
@@ -223,6 +247,8 @@ const Landing = ({ onEnter }) => {
   const chromeRef = useRef(null)
   const hintRef = useRef(null)
   const overlayRef = useRef(null)
+  const floorplanScrimRef = useRef(null)
+  const floorplanCardRef = useRef(null)
   // Drives the ambient "light running down the plates" loop and its hover
   // pause. Handlers are (re)assigned when the overlay shows; noops otherwise.
   const overlayAnim = useRef({
@@ -262,7 +288,43 @@ const Landing = ({ onEnter }) => {
     enterCb.current = onEnter
   }, [onEnter])
 
-   
+  const enterViewCb = useRef(onEnterView)
+  useEffect(() => {
+    enterViewCb.current = onEnterView
+  }, [onEnterView])
+
+  // Floorplan quick-preview — clicking a floor plate on the building overlay
+  // opens a small square glimpse of that floor's plan rather than jumping
+  // straight to the menu.
+  const [floorplanOpen, setFloorplanOpen] = useState(false)
+  const [previewPlan, setPreviewPlan] = useState(null)
+
+  const openPreview = useCallback((plan) => {
+    setPreviewPlan(plan)
+    setFloorplanOpen(true)
+  }, [])
+
+  // A click anywhere on the building overlay resolves to the specific plate
+  // under the cursor, ranks it top-to-bottom among that overlay's plates, and
+  // opens the plan that floor band maps to — so different floors (up/down)
+  // show different images, not just different tower sides.
+  const onOverlayClick = useCallback(
+    (e) => {
+      const root = overlayRef.current
+      const plate = e.target.closest?.('.cls-1')
+      if (!root || !plate) return
+      const plates = Array.from(root.querySelectorAll('.cls-1'))
+      const ordered = plates
+        .map((p) => ({ p, y: p.getBBox().y }))
+        .sort((a, b) => a.y - b.y)
+      const rank = ordered.findIndex((o) => o.p === plate)
+      if (rank === -1) return
+      openPreview(planForPlateRank(rank, ordered.length))
+    },
+    [openPreview],
+  )
+
+
   const drawFrame = useCallback((axis) => {
     const cv = canvasRef.current
     const img = framesRef.current[wrapFrame(axis)]
@@ -495,6 +557,16 @@ const Landing = ({ onEnter }) => {
     return () => window.removeEventListener('keydown', onKey)
   }, [ready, exiting, advanceStop])
 
+  // --- Keyboard: dismiss the floorplan preview with Escape. --------------
+  useEffect(() => {
+    if (!floorplanOpen) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') setFloorplanOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [floorplanOpen])
+
   // --- Exit to the menu: wipe paper on, then hand over. -----------------
   useGSAP(
     () => {
@@ -612,16 +684,50 @@ const Landing = ({ onEnter }) => {
   )
 
   const hasOverlay = activeFrame != null && !!overlayForFrame(activeFrame)
+  const plan = previewPlan ?? FLOOR_TYPE_PLANS[FLOOR_TYPE_PLANS.length - 1]
+
+  // --- Floorplan preview: fade the scrim, pop the card in. ---------------
+  useGSAP(
+    () => {
+      const scrim = floorplanScrimRef.current
+      const card = floorplanCardRef.current
+      if (!scrim || !card) return
+
+      if (!floorplanOpen) {
+        if (prefersReducedMotion()) {
+          gsap.set([scrim, card], { autoAlpha: 0 })
+        } else {
+          gsap.to(scrim, { autoAlpha: 0, duration: 0.25, ease: 'power2.in' })
+          gsap.to(card, { autoAlpha: 0, scale: 0.96, y: 6, duration: 0.25, ease: 'power2.in' })
+        }
+        return
+      }
+
+      if (prefersReducedMotion()) {
+        gsap.set(scrim, { autoAlpha: 1 })
+        gsap.set(card, { autoAlpha: 1, scale: 1, y: 0 })
+        return
+      }
+
+      gsap.set(scrim, { autoAlpha: 0 })
+      gsap.set(card, { autoAlpha: 0, scale: 0.94, y: 10 })
+      gsap
+        .timeline()
+        .to(scrim, { autoAlpha: 1, duration: 0.3, ease: 'power2.out' }, 0)
+        .to(card, { autoAlpha: 1, scale: 1, y: 0, duration: 0.4, ease: 'zenith' }, 0.05)
+    },
+    { dependencies: [floorplanOpen], scope: rootRef },
+  )
 
   return (
     <div ref={rootRef} data-gate className="fixed inset-0 z-100 select-none bg-void">
       {/* The turntable. */}
       <canvas
         ref={canvasRef}
-        onPointerDown={ready && !exiting ? onPointerDown : undefined}
-        onPointerMove={ready && !exiting ? onPointerMove : undefined}
-        onPointerUp={ready && !exiting ? onPointerUp : undefined}
-        onPointerCancel={ready && !exiting ? onPointerUp : undefined}
+        onPointerDown={ready && !exiting && !floorplanOpen ? onPointerDown : undefined}
+        onPointerMove={ready && !exiting && !floorplanOpen ? onPointerMove : undefined}
+        onPointerUp={ready && !exiting && !floorplanOpen ? onPointerUp : undefined}
+        onPointerCancel={ready && !exiting && !floorplanOpen ? onPointerUp : undefined}
         className="absolute inset-0 h-full w-full touch-none cursor-grab opacity-0 active:cursor-grabbing"
         aria-label="Runwal Zenith, 360-degree tower view. Drag to rotate."
         role="img"
@@ -631,17 +737,18 @@ const Landing = ({ onEnter }) => {
           plates sit on the tower. Shown only on a stop that carries one
           (frames 0 and 40 today). The container is click-through; only the
           painted plates are hoverable/clickable (see `.floor-overlay` in
-          index.css). Destination TBD — placeholder to the menu. */}
+          index.css). Clicking a plate opens the floorplan quick-preview below,
+          for the floor that plate represents. */}
       <div
         ref={overlayRef}
         role="button"
         tabIndex={hasOverlay ? 0 : -1}
-        aria-label="Explore the tower"
-        onClick={() => enterCb.current?.()}
+        aria-label="Preview a floor's plan"
+        onClick={onOverlayClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            enterCb.current?.()
+            openPreview(FLOOR_TYPE_PLANS[FLOOR_TYPE_PLANS.length - 1])
           }
         }}
         onMouseEnter={() => overlayAnim.current.onEnter()}
@@ -737,6 +844,77 @@ const Landing = ({ onEnter }) => {
           onNavigate={() => enterCb.current?.()}
         />
       ))}
+
+      {/* Floorplan quick-preview — opens on a click of the tower, or a number
+          on the floor rail. A large look at one plan (at least half the
+          screen), with a way through to the full Floorplan view; the scrim
+          dismisses it on click or Escape. */}
+      <div
+        ref={floorplanScrimRef}
+        aria-hidden={!floorplanOpen}
+        onClick={() => setFloorplanOpen(false)}
+        className={[
+          'absolute inset-0 z-70 flex items-center justify-center bg-void/70 p-4 opacity-0 sm:p-6',
+          floorplanOpen ? 'pointer-events-auto' : 'pointer-events-none',
+        ].join(' ')}
+      >
+        <div
+          ref={floorplanCardRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Floorplan preview"
+          onClick={(e) => e.stopPropagation()}
+          className={[
+            'glass-surface relative flex w-[92vw] max-w-[560px] flex-col gap-4 overflow-y-auto',
+            'rounded-2xl p-4 text-ink opacity-0 shadow-[0_50px_120px_-30px_rgb(0_0_0/0.7)] sm:p-6',
+            'md:h-[80vh] md:max-h-[760px] md:w-[85vw] md:max-w-[1080px] md:flex-row md:gap-8 md:overflow-hidden',
+          ].join(' ')}
+        >
+          <button
+            type="button"
+            onClick={() => setFloorplanOpen(false)}
+            aria-label="Close floorplan preview"
+            className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-paper/85 text-ink transition-colors duration-200 hover:bg-paper md:right-4 md:top-4"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.8]">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+
+          <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-lg bg-paper-2 md:aspect-auto md:h-full md:flex-1">
+            <picture>
+              <source srcSet={`${plan.base}-960.webp`} type="image/webp" />
+              <img
+                src={`${plan.base}-960.jpg`}
+                alt={`${plan.name} floorplan`}
+                className="h-full w-full object-contain p-2 md:p-5"
+              />
+            </picture>
+          </div>
+
+          <div className="flex flex-1 flex-col justify-between gap-4 md:w-[280px] md:flex-none md:py-2">
+            <div>
+              <p className="t-label text-ink-3">{plan.subtitle}</p>
+              <h3 className="mt-1.5 font-fine text-[22px] leading-tight text-ink md:text-[28px] 3xl:text-[32px]">
+                {plan.name}
+              </h3>
+              <p className="mt-3 text-[12px] leading-relaxed text-ink-2 md:text-[13px]">
+                A closer look at this floor, ahead of the full, unit-by-unit Floorplan view.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => enterViewCb.current?.('floorplan')}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink md:text-[11px]"
+            >
+              View full plan
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
+                <path d="M4 12h15M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Loader — paper over the whole surface, wiped off on ready. */}
       <div
