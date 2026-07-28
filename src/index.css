@@ -173,7 +173,9 @@
 @utility t-label {
   font-family: var(--font-ui);
   font-weight: 400;
-  font-size: 10px;
+  /* Flat 10px up to ~1900px, then grows so labels don't shrink to specks on
+     4xl/5xl (2560–3840px) screens. */
+  font-size: clamp(10px, 0.52vw, 13px);
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -241,9 +243,11 @@
 @utility chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding-inline: 12px;
+  gap: clamp(8px, 0.5vw, 12px);
+  /* Grows on very large screens so the status/level pills don't read as specks
+     on 4K; flat 30px below ~1900px. */
+  height: clamp(30px, 1.65vw, 42px);
+  padding-inline: clamp(12px, 0.8vw, 20px);
   background: rgb(252 250 246 / 0.72);
   backdrop-filter: blur(20px) brightness(4.2) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) brightness(4.2) saturate(1.3);
@@ -281,9 +285,73 @@
   }
 }
 
+/* Floor-highlight overlay — an inlined SVG of stacked floor plates laid over
+   the tower. Colour is `currentColor` (theme brass). The root svg is click-
+   through so dragging still works over the frame; only the painted plates are
+   interactive, and each lifts on its own hover (a floor-by-floor read). */
+.floor-overlay {
+  color: var(--color-brass-lift);
+}
+.floor-overlay svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgb(217 193 88 / 0.25));
+}
+/* Alpha lives per-plate (not a group opacity) so a hovered plate can lift well
+   above the resting tint instead of being capped by it. */
+.floor-overlay .cls-1 {
+  pointer-events: auto;
+  cursor: pointer;
+  fill: currentColor;
+  fill-opacity: 0.32;
+  transition: fill 0.2s ease, fill-opacity 0.2s ease;
+}
+/* !important so a hover always reads over the ambient cascade, which drives
+   fill-opacity through inline styles (GSAP). */
+.floor-overlay .cls-1:hover {
+  fill: #fff0ad !important;
+  fill-opacity: 0.98 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .floor-overlay .cls-1 {
+    transition: none;
+  }
+}
+
+/* Hotspot anchor — a ring that breathes out from the dot. */
+@keyframes tag-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Drag affordance — the double chevron drifts side to side. */
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .grain {
     animation: none;
+  }
+  .animate-\[drift_2\.4s_ease-in-out_infinite\] {
+    animation: none;
+  }
+  [data-tag-ring] {
+    animation: none !important;
   }
 }
 

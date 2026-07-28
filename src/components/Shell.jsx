@@ -149,6 +149,7 @@ const Shell = ({ viewId, onMenu }) => {
             'absolute left-2 top-2 z-40 grid h-9 w-9 place-items-center rounded-full',
             'glass-surface shadow-[0_14px_34px_-16px_rgb(0_0_0/0.5)]',
             'transition-colors duration-200 hover:bg-ink hover:text-paper',
+            'touch:h-11 touch:w-11', // ≥44px tap target on touch devices
             'sm:left-2.5 sm:top-2.5 md:left-5 md:top-5 md:h-10 md:w-10',
             'lg:left-3 lg:top-3 3xl:left-4 3xl:top-4 3xl:h-11 3xl:w-11',
           ].join(' ')}

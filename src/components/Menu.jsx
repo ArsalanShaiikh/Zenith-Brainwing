@@ -19,7 +19,7 @@ const FACTS = [
   ['Possession', '2029'],
 ]
 
-const Menu = ({ onPick }) => {
+const Menu = ({ onPick, onHome }) => {
   const rootRef = useRef(null)
   const coverRef = useRef(null)
   const sheetRef = useRef(null)
@@ -84,21 +84,24 @@ const Menu = ({ onPick }) => {
     { dependencies: [hot], scope: rootRef },
   )
 
-  const exit = (id) => {
+  // Wipe the paper back on, then route. The next screen is painted behind a
+  // full cover, so nothing of the outgoing menu is ever visible under it.
+  const leave = (done) => {
     if (prefersReducedMotion()) {
-      onPick(id)
+      done()
       return
     }
-    // Wipe the paper back on, then route. The next screen is painted behind a
-    // full cover, so nothing of the outgoing menu is ever visible under it.
     gsap.set(coverRef.current, { clipPath: 'inset(100% 0% 0% 0%)', autoAlpha: 1 })
     gsap.to(coverRef.current, {
       clipPath: 'inset(0% 0% 0% 0%)',
       duration: 0.62,
       ease: 'expo.inOut',
-      onComplete: () => onPick(id),
+      onComplete: done,
     })
   }
+
+  const exit = (id) => leave(() => onPick(id))
+  const goHome = () => leave(() => onHome?.())
 
   return (
     <div
@@ -269,6 +272,28 @@ const Menu = ({ onPick }) => {
           </div>
           </div>
         </div>
+
+        {/* Home — back to the landing gate. Mirrors the shell's back button,
+            but on the right so it never collides with the sheet. */}
+        <button
+          type="button"
+          onClick={goHome}
+          aria-label="Back to home"
+          className={[
+            'absolute right-2 top-2 z-40 grid h-9 w-9 place-items-center rounded-full',
+            'glass-surface shadow-[0_14px_34px_-16px_rgb(0_0_0/0.5)]',
+            'transition-colors duration-200 hover:bg-ink hover:text-paper hover:backdrop-brightness-100',
+            'touch:h-11 touch:w-11', // ≥44px tap target on touch devices
+            'sm:right-2.5 sm:top-2.5 md:right-5 md:top-5 md:h-10 md:w-10',
+            'lg:right-3 lg:top-3 3xl:right-4 3xl:top-4 3xl:h-11 3xl:w-11',
+          ].join(' ')}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+            <path d="M3 10.5 12 4l9 6.5" />
+            <path d="M5.5 9.5V20h13V9.5" />
+            <path d="M9.75 20v-5.5h4.5V20" />
+          </svg>
+        </button>
 
         {/* Paper cover — inherited from the gate on the way in, wiped back on
             the way out. */}
