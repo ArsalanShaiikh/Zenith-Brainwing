@@ -39,13 +39,13 @@ const poiPulseFeatures = () => ({
 })
 
 const ROUTE_SRC = 'zenith-route'
-// The map is warm gold, so the route goes cool to separate — teal is the
-// complement of gold and the one accent that truly reads against it (the same
-// call arcade-sapphire made). A dark casing under it cuts the route its own
-// channel through the road network, the way Google's routes have a border.
-const ROUTE_CASE = '#0b0a08' // void — the dark channel
-const ROUTE_GLOW = '#34cfba' // teal halo
-const ROUTE_LINE = '#5fddc9' // teal path
+// A warm amber/gold route, a shade brighter and more saturated than the
+// cream terrain so it still lifts off the map. The casing uses the map's own
+// dark ink label colour rather than true black, so it cuts a channel through
+// the road network without reading as a harsh slash across a light basemap.
+const ROUTE_CASE = '#33302a' // dark ink — the channel
+const ROUTE_GLOW = '#f5d17e' // amber halo
+const ROUTE_LINE = '#ddc85f' // amber path
 const ROUTE_PULSE = '#ffffff' // white travelling dashes
 const EMPTY = { type: 'FeatureCollection', features: [] }
 const lineFeature = (coords) => ({
@@ -137,7 +137,7 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
 
     if (!map.getSource(ROUTE_SRC)) {
       map.addSource(ROUTE_SRC, { type: 'geojson', data: EMPTY })
-      // Teal halo, spreading beyond the casing.
+      // Amber halo, spreading beyond the casing.
       map.addLayer({
         id: 'route-glow',
         type: 'line',
@@ -153,7 +153,7 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: { 'line-color': ROUTE_CASE, 'line-width': 9, 'line-opacity': 0 },
       })
-      // The path itself — cool teal against the warm map.
+      // The path itself — a brighter amber lifted off the cream map.
       map.addLayer({
         id: 'route-base',
         type: 'line',
