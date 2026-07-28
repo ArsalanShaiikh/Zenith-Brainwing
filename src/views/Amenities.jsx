@@ -128,9 +128,9 @@ const nextImage = () => {
 };
 
   const iconBtn = [
-    'grid place-items-center rounded-full bg-paper text-ink',
+    'glass-surface grid place-items-center rounded-full',
     'shadow-[0_14px_34px_-16px_rgb(0_0_0/0.6)]',
-    'transition-colors duration-200 hover:bg-ink hover:text-paper',
+    'transition-colors duration-200 hover:bg-ink hover:text-paper hover:backdrop-brightness-100',
   ].join(' ')
 
   return (
@@ -184,7 +184,7 @@ const nextImage = () => {
             {/* Solid paper caption. Touch has no hover, so it sits open there. */}
             <span
               className={[
-                'absolute bottom-0 left-0 flex flex-col gap-px rounded-tr-tile bg-paper px-2.5 py-1.5 text-left text-ink',
+                'glass-surface absolute bottom-0 left-0 flex flex-col gap-px rounded-tr-tile px-2.5 py-1.5 text-left',
                 'md:px-3 md:py-2',
                 'translate-y-full transition-transform duration-500 ease-zenith',
                 'group-hover:translate-y-0 group-focus-visible:translate-y-0',
@@ -263,7 +263,7 @@ const nextImage = () => {
                 </svg>
               </button>
 
-              <div className="absolute bottom-3 left-3 z-2 flex flex-col gap-0.5 rounded-plate bg-paper px-3.5 py-2.5 text-ink md:bottom-6 md:left-6 md:px-4 md:py-3">
+              <div className="glass-surface absolute bottom-3 left-3 z-2 flex flex-col gap-0.5 rounded-plate px-3.5 py-2.5 md:bottom-6 md:left-6 md:px-4 md:py-3">
                 <span className="text-[15px] font-normal leading-tight md:text-[17px]">
                   {cur.title || cur.name}
                 </span>

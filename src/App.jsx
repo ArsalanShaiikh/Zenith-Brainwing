@@ -23,7 +23,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Landing onEnter={() => navigate('/menu')} />} />
       <Route
         path="/menu"
-        element={<Menu onPick={(id) => navigate(`/${id}`)} />}
+        element={<Menu onPick={(id) => navigate(`/${id}`)} onHome={() => navigate('/')} />}
       />
       {VIEWS.map((v) => (
         <Route
