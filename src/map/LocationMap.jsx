@@ -26,6 +26,18 @@ function buildStyle() {
   return style
 }
 
+const POI_PULSE_SRC = 'zenith-poi-pulse'
+const POI_PULSE_COLOR = '#c2a83a' // brass-lift — matches the destination dots
+
+const poiPulseFeatures = () => ({
+  type: 'FeatureCollection',
+  features: POIS.map((p) => ({
+    type: 'Feature',
+    properties: { id: p.id },
+    geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+  })),
+})
+
 const ROUTE_SRC = 'zenith-route'
 // The map is warm gold, so the route goes cool to separate — teal is the
 // complement of gold and the one accent that truly reads against it (the same
@@ -66,13 +78,62 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
   const mapRef = useRef(null)
   const mapStyle = useMemo(() => buildStyle(), [])
   const dashRaf = useRef(0)
+  const poiPulseRaf = useRef(0)
   const camTween = useRef(null)
   const routeAbort = useRef(null)
+
+  // A sawtooth ring-radius/opacity loop, ground-projected via circle-pitch-
+  // alignment: 'map' so the pulse reads as sitting on the terrain rather than
+  // as a flat sticker facing the camera.
+  const startPoiPulse = useCallback((map) => {
+    cancelAnimationFrame(poiPulseRaf.current)
+    if (prefersReducedMotion()) {
+      map.setPaintProperty('poi-pulse', 'circle-radius', 6)
+      map.setPaintProperty('poi-pulse', 'circle-opacity', 0.25)
+      return
+    }
+    const DURATION = 2400
+    const MIN_R = 3
+    const MAX_R = 15
+    const tick = (now) => {
+      const t = (now % DURATION) / DURATION
+      if (map.getLayer('poi-pulse')) {
+        map.setPaintProperty('poi-pulse', 'circle-radius', MIN_R + (MAX_R - MIN_R) * t)
+        map.setPaintProperty('poi-pulse', 'circle-opacity', 0.45 * (1 - t))
+      }
+      poiPulseRaf.current = requestAnimationFrame(tick)
+    }
+    poiPulseRaf.current = requestAnimationFrame(tick)
+  }, [])
 
   const handleLoad = useCallback((e) => {
     const map = e.target
     mapRef.current = map
     applyMapTheme(map, zenithTheme)
+
+    if (!map.getSource(POI_PULSE_SRC)) {
+      map.addSource(POI_PULSE_SRC, { type: 'geojson', data: poiPulseFeatures() })
+      // A ring that breathes out from each destination, drawn in map space
+      // (not a screen-facing DOM element) so it lies flat on the tilted
+      // ground instead of billboarding toward the camera.
+      map.addLayer(
+        {
+          id: 'poi-pulse',
+          type: 'circle',
+          source: POI_PULSE_SRC,
+          paint: {
+            'circle-color': POI_PULSE_COLOR,
+            'circle-radius': 3,
+            'circle-opacity': 0.35,
+            'circle-stroke-width': 0,
+            'circle-pitch-alignment': 'map',
+            'circle-pitch-scale': 'map',
+          },
+        },
+        map.getLayer('building-3d') ? 'building-3d' : undefined,
+      )
+      startPoiPulse(map)
+    }
 
     if (!map.getSource(ROUTE_SRC)) {
       map.addSource(ROUTE_SRC, { type: 'geojson', data: EMPTY })
@@ -114,7 +175,7 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
         },
       })
     }
-  }, [])
+  }, [startPoiPulse])
 
   // ---- route pulse -----------------------------------------------------
   const startPulse = useCallback((map) => {
@@ -287,6 +348,7 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
 
   useEffect(() => () => {
     stopPulse()
+    cancelAnimationFrame(poiPulseRaf.current)
     camTween.current?.kill()
   }, [stopPulse])
 
@@ -314,12 +376,12 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
       {/* The tower. */}
       <Marker longitude={SITE.lng} latitude={SITE.lat} anchor="bottom">
         <div className="pointer-events-none flex flex-col items-center">
-          <span className="chip mb-2 h-auto gap-2 px-2.5 py-1.5">
+          <span className="chip mb-2 h-auto gap-2 px-3.5 py-2.5">
             <img
               src="/img/brand/runwal-240.webp"
               alt="Runwal Zenith"
               draggable="false"
-              className="h-4 w-auto select-none object-contain"
+              className="h-7 w-auto select-none object-contain"
             />
           </span>
           <span className="relative block h-3 w-3">

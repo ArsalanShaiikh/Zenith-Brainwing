@@ -71,7 +71,7 @@ const Location = ({ active }) => {
           </h2>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5">
           {GROUPS.map((g, gi) => (
             <section key={g.id} className={gi > 0 ? 'mt-1 border-t border-ink/10 pt-1' : ''}>
               <h3 className="t-label px-5 pb-1 pt-2 text-ink-3 lg:px-[clamp(20px,1.5vw,32px)]">
