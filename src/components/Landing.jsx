@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { countUp } from '../animations/countUp'
 import { VIEWS } from '../lib/views'
 import { preloadSrc } from '../lib/images'
 import {
   FRAME_COUNT,
-  STOP_STEP,
   START_INDEX,
   framePath,
   wrapFrame,
-  nearestStop,
 } from '../lib/orbit'
 import Logo from './Logo'
+import OrbitMenu from './OrbitMenu'
+import FloorExplorer from './FloorExplorer'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
 
@@ -23,33 +24,69 @@ const SWIPE_PX = 24
 
 /** Frames are a constant 16:9 (1440×810). */
 const IMG_AR = 1440 / 810
+
+/**
+ * Which rest frames a drag is allowed to land on, per mode. The landing (mode
+ * `none`) turns through every stop; the two focused modes snap only across the
+ * frames that carry their content, so a drag never stops "in between".
+ *   amenities → the three point frames (20 = podium, 60, 80 = pool/dining/kids)
+ *   floorplan → the two plate frames (0 frontal, 40 the 3/4 elevation)
+ */
+const STOPS_BY_MODE = {
+  none: [0, 20, 40, 60, 80],
+  amenities: [20, 60, 80],
+  floorplan: [0, 40],
+}
+
 /**
  * Hotspots, each pinned to one rest frame (web index). The anchor is in
  * normalised image space (0–1) so it tracks the tower through cover-crop at
- * any viewport — nudge nx/ny to re-aim. `side` is which way the leader/label
- * extend from the dot ('right' default, 'left' mirrors it — use 'left' when
- * the anchor sits on the right so the label doesn't run off-screen). Only the
- * hotspot for the current stop is shown. Destination TBD → menu placeholder.
+ * any viewport. `side` mirrors the leader/label for anchors on the right.
+ * Point tags show only in Amenities mode; SVG overlays only in Floorplan mode.
  */
 const HOTSPOTS = [
-  // Full-facade SVG overlays (no label): the tower itself is the hoverable /
-  // clickable target. Each SVG (16:9 viewBox) was traced over its own render,
-  // so laid across the whole cover-crop rect the plates cover the facade.
+  // Full-facade SVG overlays (no label): the tower itself is the hoverable
+  // target. Each SVG (16:9 viewBox) was traced over its own render.
   { frame: 0, overlay: floorFrontSvg }, // orbit-000 — frontal elevation
-  { frame: 20, label: 'Rooftop Podium', nx: 0.555, ny: 0.27 },
+  { frame: 20, label: 'Rooftop Podium', nx: 0.555, ny: 0.27, to: 'rooftop' },
   { frame: 40, overlay: floorHighlightSvg }, // orbit-040 — 3/4 elevation
-  { frame: 60, label: 'Podium Amenities', nx: 0.63, ny: 0.71 },
+  { frame: 60, label: 'Podium Amenities', nx: 0.63, ny: 0.71, to: 'podium' },
   // Frame 80 (orbit-080, frontal pool) carries several point tags at once.
-  // Swimming + Dining point left, Kids points right, so the labels never
-  // collide even though the anchors sit close on the deck.
-  { frame: 80, label: 'Swimming Pool', nx: 0.46, ny: 0.82, side: 'left' },
-  { frame: 80, label: 'Dining Area', nx: 0.675, ny: 0.76, side: 'left' },
-  { frame: 80, label: "Kids' Play Area", nx: 0.762, ny: 0.69, side: 'right' },
+  { frame: 80, label: 'Swimming Pool', nx: 0.46, ny: 0.82, side: 'left', to: 'pool' },
+  { frame: 80, label: 'Dining Area', nx: 0.675, ny: 0.76, side: 'left', to: 'dining' },
+  { frame: 80, label: "Kids' Play Area", nx: 0.762, ny: 0.69, side: 'right', to: 'kids' },
 ]
 /** Point-tag callouts (many per frame allowed) vs the single full-frame SVG. */
 const LABEL_SPOTS = HOTSPOTS.filter((h) => h.label)
 const overlayForFrame = (frame) =>
   HOTSPOTS.find((h) => h.frame === frame && h.overlay) ?? null
+
+/** Wrap a running axis value into a real frame number [0, FRAME_COUNT). */
+const norm = (v) => ((Math.round(v) % FRAME_COUNT) + FRAME_COUNT) % FRAME_COUNT
+
+/**
+ * Next allowed stop from a running axis value in a direction, returned as an
+ * absolute axis target (it may exceed [0, FRAME_COUNT) so a tween animates the
+ * true delta and wraps naturally past the seam).
+ */
+const nextAllowedTarget = (pos, dir, stops) => {
+  const cur = norm(pos)
+  if (dir > 0) {
+    for (const s of stops) if (s > cur) return pos + (s - cur)
+    return pos + (stops[0] + FRAME_COUNT - cur)
+  }
+  for (let i = stops.length - 1; i >= 0; i -= 1) if (stops[i] < cur) return pos - (cur - stops[i])
+  return pos - (cur - (stops[stops.length - 1] - FRAME_COUNT))
+}
+
+/** Nearest allowed stop in either direction (ties resolve forward), absolute. */
+const nearestAllowedTarget = (pos, stops) => {
+  const cur = norm(pos)
+  if (stops.includes(cur)) return pos
+  const fwd = nextAllowedTarget(pos, 1, stops)
+  const bwd = nextAllowedTarget(pos, -1, stops)
+  return fwd - pos <= pos - bwd ? fwd : bwd
+}
 
 /** The image's on-screen rect in CSS px — the same cover-crop the canvas paints
  *  with. Everything pinned to the tower maps through this. */
@@ -69,7 +106,6 @@ const coverRectFrom = (cv) => {
  * One point-tag callout: a white dot on the tower, an elbow leader (a diagonal
  * up to a corner, then horizontal into a glass label), mirrored for a left-side
  * label. Self-positions through the shared cover-crop and animates on `active`.
- * Many can live on one frame.
  */
 const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
   const rootRef = useRef(null)
@@ -135,13 +171,10 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
       onClick={onNavigate}
       aria-label={`${spot.label} — explore`}
       style={{ left: 0, top: 0 }}
-      // Scaled about the dot (origin-top-left = the anchor) so the whole callout
-      // shrinks proportionally on small screens instead of overflowing.
       className="group absolute z-20 origin-top-left scale-[0.7] opacity-0 outline-none min-[430px]:scale-[0.82] md:scale-90 lg:scale-100"
     >
       {/* Elbow leader: diagonal from the anchor up to a corner, then horizontal
-          into the label. Drawn first so the dot paints over the join; mirrored
-          for a left-side label. Starts at the dot so it reveals outward. */}
+          into the label; mirrored for a left-side label. */}
       <svg
         aria-hidden="true"
         width="170"
@@ -205,26 +238,34 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
 }
 
 /**
- * The landing gate — a drag-to-rotate turntable of the tower.
- *
- * Frames are pre-decoded into an off-DOM Image pool and painted to a single
- * canvas, so a turn swaps frames with zero layout and no flash. A swipe doesn't
- * scrub with the finger — it commits to the next rest position and plays the
- * frames there at a fixed 24fps, so every turn is identically paced. A press on
- * "Enter" wipes paper over the orbit and hands the surface to the menu.
+ * The landing — a drag-to-rotate turntable of the tower that now hosts the whole
+ * navigation. On the opening frame (source 40) the menu sits on the left. Drag
+ * and the menu clears; the tower turns; land back on the opening frame and it
+ * returns. Two menu picks stay in the orbit as focused *modes*:
+ *   • Amenities — reveals the point tags; the drag snaps only across the frames
+ *     that carry them; a tag opens that point's showcase.
+ *   • Floorplan — reveals the SVG plates; the drag snaps only across the two
+ *     plate frames.
+ * A Back button (shown in either mode) turns the tower back to the opening frame
+ * by the shortest path and restores the menu. The other picks (Views, Location,
+ * Enquire) wipe paper and route to their pages.
  */
-const Landing = ({ onEnter }) => {
+const Landing = ({ onView, onPoint }) => {
+  const location = useLocation()
+  const navigate = useNavigate()
   const rootRef = useRef(null)
   const canvasRef = useRef(null)
   const loaderRef = useRef(null)
   const coverRef = useRef(null)
+  const pointCoverRef = useRef(null)
   const counterRef = useRef(null)
   const ruleRef = useRef(null)
   const chromeRef = useRef(null)
+  const backRef = useRef(null)
+  const enquireRef = useRef(null)
   const hintRef = useRef(null)
   const overlayRef = useRef(null)
-  // Drives the ambient "light running down the plates" loop and its hover
-  // pause. Handlers are (re)assigned when the overlay shows; noops otherwise.
+  // Drives the ambient "light running down the plates" loop and its hover pause.
   const overlayAnim = useRef({
     hovering: false,
     running: false,
@@ -236,7 +277,15 @@ const Landing = ({ onEnter }) => {
   })
 
   const framesRef = useRef([])
-  const stateRef = useRef({ pos: START_INDEX })
+  // Open on the frame of the point we're returning from (if any), else the
+  // opening shot — and if we're returning from a point, reopen in Amenities mode
+  // so its tags are already showing.
+  const stateRef = useRef(null)
+  const returnPoint = location.state?.returnPoint ?? null
+  if (stateRef.current === null) {
+    const from = returnPoint ? HOTSPOTS.find((h) => h.to === returnPoint) : null
+    stateRef.current = { pos: from ? from.frame : START_INDEX }
+  }
   const dragRef = useRef({ active: false, startX: 0, committed: false })
   const animatingRef = useRef(false)
   const tweenRef = useRef(null)
@@ -245,11 +294,23 @@ const Landing = ({ onEnter }) => {
   const [ready, setReady] = useState(false)
   const [hinting, setHinting] = useState(true)
   const [exiting, setExiting] = useState(false)
-  // The current rest frame (web index) or null while turning. Drives which
-  // hotspots + overlay are shown. `overlayHtml` persists the last SVG so it
-  // stays put through its fade-out.
+  // The current rest frame (web index) or null while turning.
   const [activeFrame, setActiveFrame] = useState(null)
   const [overlayHtml, setOverlayHtml] = useState('')
+  // Which focused mode the orbit is in. Restored to Amenities when we return
+  // from a point's showcase so its tags are already up.
+  const [mode, setMode] = useState(returnPoint ? 'amenities' : 'none')
+  const modeRef = useRef(mode)
+  const setModeSafe = useCallback((m) => {
+    modeRef.current = m
+    setMode(m)
+  }, [])
+  // The floorplan explorer: clicking a floor plate on the tower docks the
+  // building left and opens that floor's plan. `frame` = which elevation, `rank`
+  // = which plate (top-to-bottom) was clicked, so it opens pre-selected.
+  // `openId` bumps on each open so the explorer remounts fresh (its initial
+  // elevation/floor come from these props via useState initialisers).
+  const [floorDetail, setFloorDetail] = useState({ open: false, frame: 40, rank: 0, openId: 0 })
 
   const showFrame = useCallback((frame) => {
     setActiveFrame(frame)
@@ -257,12 +318,24 @@ const Landing = ({ onEnter }) => {
     if (ov) setOverlayHtml(ov.overlay)
   }, [])
 
-  const enterCb = useRef(onEnter)
+  // `returnPoint` is a one-shot hand-off from a showcase: it opens this mount in
+  // Amenities, but `history.state` survives a reload, so strip it once consumed —
+  // otherwise reloading the page would keep re-entering Amenities instead of the
+  // menu. Clearing it doesn't reset `mode` (already initialised above).
+  const clearedStateRef = useRef(false)
   useEffect(() => {
-    enterCb.current = onEnter
-  }, [onEnter])
+    if (clearedStateRef.current) return
+    clearedStateRef.current = true
+    if (returnPoint) navigate('/', { replace: true, state: null })
+  }, [returnPoint, navigate])
 
-   
+  const viewCb = useRef(onView)
+  const pointCb = useRef(onPoint)
+  useEffect(() => {
+    viewCb.current = onView
+    pointCb.current = onPoint
+  }, [onView, onPoint])
+
   const drawFrame = useCallback((axis) => {
     const cv = canvasRef.current
     const img = framesRef.current[wrapFrame(axis)]
@@ -287,14 +360,9 @@ const Landing = ({ onEnter }) => {
     ctx.drawImage(img, dx, dy, dw, dh)
   }, [])
 
-   
   const drawCurrent = useCallback(() => drawFrame(stateRef.current.pos), [drawFrame])
 
-  // The image's on-screen rect in CSS px — the same cover-crop the canvas
-  // paints with. Everything pinned to the tower (hotspot, SVG overlay) maps
-  // through this, so it tracks the frame at any viewport.
-  // Stretch the SVG overlay across the whole image rect (it's a full-frame,
-  // same-aspect graphic, so it lands 1:1 on the render). Hotspots self-position.
+  // Stretch the SVG overlay across the whole image rect (same-aspect graphic).
   const positionOverlay = useCallback(() => {
     const el = overlayRef.current
     const r = coverRectFrom(canvasRef.current)
@@ -304,7 +372,6 @@ const Landing = ({ onEnter }) => {
     el.style.width = `${r.dw}px`
     el.style.height = `${r.dh}px`
   }, [])
-
 
   const resize = useCallback(() => {
     const cv = canvasRef.current
@@ -335,7 +402,7 @@ const Landing = ({ onEnter }) => {
       const img = new Image()
       img.decoding = 'async'
       img.onload = img.onerror = () => {
-        if (i === START_INDEX) drawCurrent()
+        if (i === norm(stateRef.current.pos)) drawCurrent()
         bump()
       }
       img.src = framePath(i)
@@ -344,8 +411,7 @@ const Landing = ({ onEnter }) => {
     framesRef.current = imgs
     ;(document.fonts?.ready ?? Promise.resolve()).then(bump)
 
-    // Warm the view plates in the background so the menu and first transition
-    // never wait on them. Not counted toward progress — the orbit is the gate.
+    // Warm the view plates in the background so the routed pages never wait.
     for (const v of VIEWS) {
       const warm = new Image()
       warm.decoding = 'async'
@@ -381,25 +447,21 @@ const Landing = ({ onEnter }) => {
   )
 
   // --- Reveal the orbit once the pool is warm. --------------------------
-  // The opening frame stays perfectly still — an auto-rotate to hint the drag
-  // read as glitchy, and the "Drag to rotate" pill says it plainly enough.
   useGSAP(
     () => {
       if (!ready) return
       drawCurrent()
       const loader = loaderRef.current
       const canvas = canvasRef.current
-      const chrome = chromeRef.current
 
       if (prefersReducedMotion()) {
         gsap.set(loader, { autoAlpha: 0 })
-        gsap.set([canvas, chrome], { autoAlpha: 1 })
+        gsap.set(canvas, { autoAlpha: 1 })
         showFrame(wrapFrame(stateRef.current.pos))
         return
       }
 
       gsap.set(canvas, { autoAlpha: 0, scale: 1.06, transformOrigin: '50% 50%' })
-      gsap.set(chrome, { autoAlpha: 0 })
 
       gsap
         .timeline({
@@ -412,15 +474,11 @@ const Landing = ({ onEnter }) => {
           0.1,
         )
         .set(loader, { autoAlpha: 0 })
-        .to(chrome, { autoAlpha: 1, duration: 0.9, ease: 'zenith' }, '-=0.7')
     },
     { dependencies: [ready], scope: rootRef },
   )
 
   // --- Play the turn to a rest position at a fixed 24fps. ---------------
-  // Linear time + integer frames = the on-screen frame changes 24× a second
-  // no matter the display refresh, so every turn is paced identically.
-
   const playTo = useCallback(
     (target) => {
       if (animatingRef.current) return
@@ -435,10 +493,8 @@ const Landing = ({ onEnter }) => {
         ease: 'none',
         onUpdate: drawCurrent,
         onComplete: () => {
-          // Renormalise so the running total never drifts unbounded.
-          stateRef.current.pos = ((target % FRAME_COUNT) + FRAME_COUNT) % FRAME_COUNT
+          stateRef.current.pos = norm(target)
           animatingRef.current = false
-          // Show whichever hotspots / overlay live on the frame we landed on.
           showFrame(wrapFrame(target))
         },
       })
@@ -446,9 +502,12 @@ const Landing = ({ onEnter }) => {
     [drawCurrent, showFrame],
   )
 
-  // Advance one rest position in a direction (+1 forward, -1 back).
-  const advanceStop = useCallback(
-    (dir) => playTo(nearestStop(stateRef.current.pos) + dir * STOP_STEP),
+  // Advance one allowed stop in a direction (+1 forward, -1 back) for the mode.
+  const advance = useCallback(
+    (dir) => {
+      const stops = STOPS_BY_MODE[modeRef.current] || STOPS_BY_MODE.none
+      playTo(nextAllowedTarget(stateRef.current.pos, dir, stops))
+    },
     [playTo],
   )
 
@@ -469,9 +528,9 @@ const Landing = ({ onEnter }) => {
       const dx = e.clientX - d.startX
       if (Math.abs(dx) < SWIPE_PX) return
       d.committed = true // one turn per gesture
-      advanceStop(dx > 0 ? 1 : -1)
+      advance(dx > 0 ? 1 : -1)
     },
-    [advanceStop],
+    [advance],
   )
 
   const onPointerUp = useCallback((e) => {
@@ -489,34 +548,116 @@ const Landing = ({ onEnter }) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
       e.preventDefault()
       setHinting(false)
-      advanceStop(e.key === 'ArrowRight' ? 1 : -1)
+      advance(e.key === 'ArrowRight' ? 1 : -1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ready, exiting, advanceStop])
+  }, [ready, exiting, advance])
 
-  // --- Exit to the menu: wipe paper on, then hand over. -----------------
-  useGSAP(
-    () => {
-      if (!exiting) return
-      const cover = coverRef.current
-      if (!cover || prefersReducedMotion()) {
-        enterCb.current?.()
-        return
+  // --- Menu / mode logic. -----------------------------------------------
+  // The menu shows only on the opening frame with no mode engaged. The corner
+  // chrome sits behind it (logo top-left, hero title bottom-left) on every
+  // rested orbit frame so the landing stays branded. The Back button shows only
+  // inside a mode.
+  const menuVisible = ready && !exiting && mode === 'none' && activeFrame === START_INDEX
+  // Corner branding (Runwal logo, hero title, drag hint) stays up on every
+  // rested orbit frame — including the menu frame — so it reads as a landing
+  // and not a bare menu screen. Hidden only while turning or inside a mode.
+  const chromeVisible = ready && !exiting && mode === 'none' && activeFrame != null
+  const backVisible = ready && !exiting && mode !== 'none' && !floorDetail.open
+  // A standing Enquire CTA — up on the orbit and the menu frame, tucked away
+  // inside the focused Amenities / Floorplan modes.
+  const ctaVisible = ready && !exiting && mode === 'none'
+
+  const onMenuSelect = useCallback(
+    (id) => {
+      if (id === 'amenities') {
+        setModeSafe('amenities') // frame 20 already carries the podium tag
+      } else if (id === 'floorplan') {
+        setModeSafe('floorplan')
+        playTo(nearestAllowedTarget(stateRef.current.pos, STOPS_BY_MODE.floorplan))
+      } else {
+        // Views / Location / Enquire — wipe paper and route to the page.
+        const cover = coverRef.current
+        if (!cover || prefersReducedMotion()) {
+          viewCb.current?.(id)
+          return
+        }
+        setExiting(true)
+        gsap.set(cover, { clipPath: 'inset(100% 0% 0% 0%)', autoAlpha: 1 })
+        gsap.to(cover, {
+          clipPath: 'inset(0% 0% 0% 0%)',
+          duration: 0.6,
+          ease: 'expo.inOut',
+          onComplete: () => viewCb.current?.(id),
+        })
       }
-      gsap.set(cover, { clipPath: 'inset(100% 0% 0% 0%)', autoAlpha: 1 })
-      gsap.to(cover, {
-        clipPath: 'inset(0% 0% 0% 0%)',
-        duration: 0.6,
-        ease: 'expo.inOut',
-        onComplete: () => enterCb.current?.(),
-      })
     },
-    { dependencies: [exiting], scope: rootRef },
+    [playTo, setModeSafe],
   )
 
-  // --- SVG overlay for spots that carry one: wipe it up, then run a single
-  //     light down the plates as a "hoverable" cue. -----------------------
+  // Leave a mode: turn the tower back to the opening frame by the shortest path,
+  // then the menu returns (menuVisible flips true when we land on START_INDEX).
+  const exitMode = useCallback(() => {
+    setModeSafe('none')
+    playTo(nearestAllowedTarget(stateRef.current.pos, [START_INDEX]))
+  }, [playTo, setModeSafe])
+
+  // Floorplan mode: a click on a floor plate ranks it among the elevation's
+  // plates (top-to-bottom) and opens the explorer docked, on that floor.
+  const onFloorPlateClick = useCallback((e) => {
+    if (modeRef.current !== 'floorplan') return
+    const root = overlayRef.current
+    const plate = e.target.closest?.('.cls-1')
+    if (!root || !plate) return
+    const plates = Array.from(root.querySelectorAll('.cls-1'))
+      .map((p) => ({ p, y: p.getBBox().y }))
+      .sort((a, b) => a.y - b.y)
+      .map((o) => o.p)
+    const rank = plates.indexOf(plate)
+    if (rank < 0) return
+    setFloorDetail((d) => ({ open: true, frame: norm(stateRef.current.pos), rank, openId: d.openId + 1 }))
+  }, [])
+
+  const closeFloorDetail = useCallback(() => {
+    setFloorDetail((d) => ({ ...d, open: false }))
+  }, [])
+
+  // --- Corner chrome + Back button visibility. --------------------------
+  useGSAP(
+    () => {
+      if (chromeRef.current) {
+        gsap.to(chromeRef.current, {
+          autoAlpha: chromeVisible ? 1 : 0,
+          duration: 0.45,
+          ease: 'power2.out',
+        })
+      }
+      if (backRef.current) {
+        gsap.to(backRef.current, {
+          autoAlpha: backVisible ? 1 : 0,
+          duration: 0.4,
+          ease: 'power2.out',
+          pointerEvents: backVisible ? 'auto' : 'none',
+        })
+      }
+      if (enquireRef.current) {
+        gsap.to(enquireRef.current, {
+          autoAlpha: ctaVisible ? 1 : 0,
+          duration: 0.45,
+          ease: 'power2.out',
+          pointerEvents: ctaVisible ? 'auto' : 'none',
+        })
+      }
+    },
+    { dependencies: [chromeVisible, backVisible, ctaVisible], scope: rootRef },
+  )
+
+  // --- SVG overlay (Floorplan mode): wipe it up, then run a single light down
+  //     the plates as a "hoverable" cue. ----------------------------------
+  const hasOverlay =
+    mode === 'floorplan' && activeFrame != null && !!overlayForFrame(activeFrame)
+
   useGSAP(
     () => {
       const el = overlayRef.current
@@ -533,7 +674,6 @@ const Landing = ({ onEnter }) => {
       st.hovering = false
       st.onEnter = st.onLeave = () => {}
 
-      const hasOverlay = activeFrame != null && !!overlayForFrame(activeFrame)
       if (!hasOverlay) {
         gsap.to(el, { autoAlpha: 0, duration: 0.35, ease: 'power2.out' })
         gsap.set(plates, { clearProps: 'fillOpacity,fill' })
@@ -550,7 +690,6 @@ const Landing = ({ onEnter }) => {
       gsap.set(el, { autoAlpha: 1, clipPath: 'inset(0% 0% 100% 0%)' })
       gsap.to(el, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'power2.out' })
 
-      // Order the plates top-to-bottom so the light descends cleanly.
       const ordered = plates
         .map((p) => ({ p, y: p.getBBox().y }))
         .sort((a, b) => a.y - b.y)
@@ -558,8 +697,6 @@ const Landing = ({ onEnter }) => {
 
       const GAP = 1.15 // beat between passes
 
-      // One descent: a single crest travels down — each plate flares bright and
-      // eases back, tightly staggered so it reads as one moving light, not a band.
       function buildPass() {
         return gsap
           .timeline({
@@ -573,8 +710,6 @@ const Landing = ({ onEnter }) => {
               { fill: '#fff4c8', fillOpacity: 1, duration: 0.12, ease: 'power2.out' },
               { fill: '#d9c158', fillOpacity: 0.3, duration: 0.2, ease: 'power2.in' },
             ],
-            // Stagger ~ the pulse length, so only a couple plates glow at once —
-            // a single light stepping down rather than a lit band.
             stagger: { each: 0.085, from: 'start' },
           })
       }
@@ -582,15 +717,12 @@ const Landing = ({ onEnter }) => {
         st.running = true
         st.pass = buildPass()
       }
-      // Queue the next pass — unless a hover has paused the loop.
       function scheduleNext() {
         st.next = null
         if (st.hovering) return
         st.next = gsap.delayedCall(GAP, runPass)
       }
 
-      // Hover: let a running descent finish, but cancel any queued/idle pass so
-      // nothing new starts while hovering. Leave: resume once we're idle.
       st.onEnter = () => {
         clearTimeout(st.leaveTimer)
         st.hovering = true
@@ -599,51 +731,55 @@ const Landing = ({ onEnter }) => {
       }
       st.onLeave = () => {
         clearTimeout(st.leaveTimer)
-        // Small debounce so crossing seams between plates doesn't flicker.
         st.leaveTimer = setTimeout(() => {
           st.hovering = false
           if (!st.running && !st.next) scheduleNext()
         }, 140)
       }
 
-      st.next = gsap.delayedCall(0.5, runPass) // first pass after the wipe lands
+      st.next = gsap.delayedCall(0.5, runPass)
     },
-    { dependencies: [activeFrame], scope: rootRef },
+    { dependencies: [hasOverlay, activeFrame], scope: rootRef },
   )
 
-  const hasOverlay = activeFrame != null && !!overlayForFrame(activeFrame)
+  // Fade the orbit to black, then route to a point's showcase. The showcase
+  // fades its media up from the same black, so the two meet without a cut.
+  const leaveToPoint = (id) => {
+    const cover = pointCoverRef.current
+    if (!cover || prefersReducedMotion()) {
+      pointCb.current?.(id)
+      return
+    }
+    gsap.set(cover, { autoAlpha: 0 })
+    gsap.to(cover, {
+      autoAlpha: 1,
+      duration: 0.45,
+      ease: 'power2.inOut',
+      onComplete: () => pointCb.current?.(id),
+    })
+  }
 
   return (
     <div ref={rootRef} data-gate className="fixed inset-0 z-100 select-none bg-void">
       {/* The turntable. */}
       <canvas
         ref={canvasRef}
-        onPointerDown={ready && !exiting ? onPointerDown : undefined}
-        onPointerMove={ready && !exiting ? onPointerMove : undefined}
-        onPointerUp={ready && !exiting ? onPointerUp : undefined}
-        onPointerCancel={ready && !exiting ? onPointerUp : undefined}
+        onPointerDown={ready && !exiting && !floorDetail.open ? onPointerDown : undefined}
+        onPointerMove={ready && !exiting && !floorDetail.open ? onPointerMove : undefined}
+        onPointerUp={ready && !exiting && !floorDetail.open ? onPointerUp : undefined}
+        onPointerCancel={ready && !exiting && !floorDetail.open ? onPointerUp : undefined}
         className="absolute inset-0 h-full w-full touch-none cursor-grab opacity-0 active:cursor-grabbing"
         aria-label="Runwal Zenith, 360-degree tower view. Drag to rotate."
         role="img"
       />
 
-      {/* Floor-highlight overlay — inlined SVG pinned to the image rect so its
-          plates sit on the tower. Shown only on a stop that carries one
-          (frames 0 and 40 today). The container is click-through; only the
-          painted plates are hoverable/clickable (see `.floor-overlay` in
-          index.css). Destination TBD — placeholder to the menu. */}
+      {/* Floor-plate overlay — shown only in Floorplan mode on a plate frame.
+          The container is click-through; only the painted plates are hoverable
+          (see `.floor-overlay` in index.css). */}
       <div
         ref={overlayRef}
-        role="button"
-        tabIndex={hasOverlay ? 0 : -1}
-        aria-label="Explore the tower"
-        onClick={() => enterCb.current?.()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            enterCb.current?.()
-          }
-        }}
+        aria-hidden={hasOverlay ? undefined : 'true'}
+        onClick={onFloorPlateClick}
         onMouseEnter={() => overlayAnim.current.onEnter()}
         onMouseLeave={() => overlayAnim.current.onLeave()}
         style={{ left: 0, top: 0, width: 0, height: 0 }}
@@ -658,7 +794,11 @@ const Landing = ({ onEnter }) => {
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgb(11_10_8/0.45)_0%,transparent_22%,transparent_58%,rgb(11_10_8/0.72)_100%)]"
       />
 
-      {/* Overlay chrome. */}
+      {/* The menu — on the left, over the opening frame only. */}
+      <OrbitMenu show={menuVisible} onSelect={onMenuSelect} />
+
+      {/* Corner chrome — logo, title, drag hint. Shown on the non-opening
+          frames (mode `none`), where the menu isn't. */}
       <div
         ref={chromeRef}
         className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-4 opacity-0 sm:p-5 md:p-8 lg:p-10 3xl:p-14"
@@ -668,12 +808,8 @@ const Landing = ({ onEnter }) => {
             width={180}
             className="pointer-events-auto w-24 sm:w-28 md:w-32 3xl:w-40 drop-shadow-[0_2px_18px_rgb(0_0_0/0.55)]"
           />
-          <span className="t-label hidden text-paper/80 [text-shadow:0_2px_18px_rgb(0_0_0/0.6)] sm:block">
-            360&deg; &middot; Turntable
-          </span>
         </div>
 
-        {/* Drag affordance, centred. Fades the moment you take hold. */}
         <div
           ref={hintRef}
           aria-hidden="true"
@@ -692,51 +828,82 @@ const Landing = ({ onEnter }) => {
           </span>
         </div>
 
-        <div className="flex items-end justify-between gap-4">
-          <div className="[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]">
-            <p className="t-label flex items-center gap-2 text-paper/75 before:h-px before:w-3.5 before:bg-brass before:content-['']">
-              Runwal &middot; Balkum, Thane (W)
-            </p>
-            <h1 className="mt-1 font-fine text-[clamp(34px,7vw,72px)] leading-[0.95] tracking-[-0.02em] text-paper">
-              Zenith
-            </h1>
-            <p className="mt-1 text-[11px] font-light text-paper/70 md:text-[12px]">
-              A 52-storey landmark, seen from every side
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={!ready || exiting}
-            onClick={() => setExiting(true)}
-            className={[
-              'pointer-events-auto inline-flex shrink-0 items-center gap-2.5 rounded-full px-5 py-3',
-              'glass-surface text-[10px] uppercase tracking-[0.16em] text-ink',
-              'shadow-[0_18px_50px_-20px_rgb(0_0_0/0.75)] transition-colors duration-200',
-              'hover:bg-ink hover:text-paper hover:backdrop-brightness-100',
-              'md:px-6 md:text-[11px]',
-              'disabled:pointer-events-none disabled:opacity-60',
-            ].join(' ')}
-          >
-            <span>Enter experience</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
-              <path d="M4 12h15M13 6l6 6-6 6" />
-            </svg>
-          </button>
+        <div className="[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]">
+          <p className="t-label flex items-center gap-2 text-paper/75 before:h-px before:w-3.5 before:bg-brass before:content-['']">
+            Runwal &middot; Balkum, Thane (W)
+          </p>
+          <h1 className="mt-1 font-fine text-[clamp(34px,7vw,72px)] leading-[0.95] tracking-[-0.02em] text-paper">
+            Zenith
+          </h1>
+          <p className="mt-1 text-[11px] font-light text-paper/70 md:text-[12px]">
+            A 52-storey landmark, seen from every side
+          </p>
         </div>
       </div>
 
-      {/* Point-tag callouts. Each self-positions and animates on its `active`
-          flag; a frame can carry several (frame 80 has three). */}
+      {/* Back — leave a mode, turning the tower back to the opening frame. */}
+      <button
+        ref={backRef}
+        type="button"
+        onClick={exitMode}
+        aria-label="Back to menu"
+        style={{ pointerEvents: 'none' }}
+        className={[
+          'absolute left-2 top-2 z-40 grid h-9 w-9 place-items-center rounded-full opacity-0',
+          'glass-surface shadow-[0_14px_34px_-16px_rgb(0_0_0/0.5)]',
+          'transition-colors duration-200 hover:bg-ink hover:text-paper hover:backdrop-brightness-100',
+          'touch:h-11 touch:w-11',
+          'sm:left-2.5 sm:top-2.5 md:left-5 md:top-5 md:h-10 md:w-10',
+          'lg:left-3 lg:top-3 3xl:left-4 3xl:top-4 3xl:h-11 3xl:w-11',
+        ].join(' ')}
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
+          <path d="M15 5 8 12l7 7" />
+        </svg>
+      </button>
+
+      {/* Standing Enquire CTA — bottom-right, over the orbit and menu frame. */}
+      <button
+        ref={enquireRef}
+        type="button"
+        onClick={() => onMenuSelect('enquire')}
+        style={{ pointerEvents: 'none' }}
+        className={[
+          'absolute right-4 top-4 z-40 inline-flex items-center gap-2.5 rounded-full px-5 py-3 opacity-0',
+          'glass-surface text-[10px] uppercase tracking-[0.16em] text-ink',
+          'shadow-[0_18px_50px_-20px_rgb(0_0_0/0.75)] transition-colors duration-200',
+          'hover:bg-ink hover:text-paper hover:backdrop-brightness-100',
+          'sm:right-5 sm:top-5 md:right-8 md:top-8 md:px-6 md:text-[11px]',
+          'lg:right-10 lg:top-10 3xl:right-14 3xl:top-14',
+        ].join(' ')}
+      >
+        <span>Enquire</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
+          <path d="M4 12h15M13 6l6 6-6 6" />
+        </svg>
+      </button>
+
+      {/* Point-tag callouts — active only in Amenities mode, on their frame. */}
       {LABEL_SPOTS.map((spot, i) => (
         <Hotspot
           key={`${spot.frame}-${i}`}
           spot={spot}
-          active={ready && !exiting && activeFrame === spot.frame}
+          active={ready && !exiting && mode === 'amenities' && activeFrame === spot.frame}
           canvasRef={canvasRef}
-          onNavigate={() => enterCb.current?.()}
+          onNavigate={() => (spot.to ? leaveToPoint(spot.to) : undefined)}
         />
       ))}
+
+      {/* Floorplan explorer — the split view. Opens on a floor-plate click in
+          Floorplan mode; docks the building left with a plan on the right. */}
+      <FloorExplorer
+        key={floorDetail.openId}
+        open={floorDetail.open}
+        initialFrame={floorDetail.frame}
+        initialRank={floorDetail.rank}
+        onClose={closeFloorDetail}
+        onEnquire={() => onView?.('enquire')}
+      />
 
       {/* Loader — paper over the whole surface, wiped off on ready. */}
       <div
@@ -768,15 +935,22 @@ const Landing = ({ onEnter }) => {
           className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-brass"
         />
         <span className="sr" role="status" aria-live="polite">
-          {ready ? 'Ready. Drag the tower, or press enter experience.' : `Loading ${progress} percent`}
+          {ready ? 'Ready. Drag the tower to rotate, or use the menu.' : `Loading ${progress} percent`}
         </span>
       </div>
 
-      {/* Exit cover — paper wiped on for a seamless hand to the menu. */}
+      {/* Exit cover — paper wiped on for a seamless hand to a routed page. */}
       <div
         ref={coverRef}
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-50 bg-paper opacity-0"
+      />
+
+      {/* Point cover — black fade-out into a showcase. */}
+      <div
+        ref={pointCoverRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-50 bg-void opacity-0"
       />
     </div>
   )

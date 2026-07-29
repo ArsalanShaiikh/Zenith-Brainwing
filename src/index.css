@@ -320,6 +320,17 @@
   }
 }
 
+/* In the floorplan explorer the plates are the selector: they rest a touch
+   more visible than on the orbit, and the chosen floor stays lit (brass) so
+   the selection reads even when the cursor leaves. */
+.floor-explorer .cls-1 {
+  fill-opacity: 0.4;
+}
+.floor-explorer .cls-1.is-active {
+  fill: #ffe6a0 !important;
+  fill-opacity: 0.95 !important;
+}
+
 /* Hotspot anchor — a ring that breathes out from the dot. */
 @keyframes tag-pulse {
   0% {
