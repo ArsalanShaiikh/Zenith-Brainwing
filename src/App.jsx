@@ -4,6 +4,7 @@ import { VIEWS } from './lib/views'
 import Landing from './components/Landing'
 import Shell from './components/Shell'
 import Showcase from './views/Showcase'
+import Gallery from './views/Gallery'
 
 /**
  * Routes are the single source of truth for where you are:
@@ -30,6 +31,7 @@ const AppRoutes = () => {
         }
       />
       <Route path="/showcase/:id" element={<Showcase />} />
+      <Route path="/gallery" element={<Gallery onBack={() => navigate('/')} />} />
       {VIEWS.map((v) => (
         <Route
           key={v.id}

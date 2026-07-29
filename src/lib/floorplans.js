@@ -4,23 +4,253 @@
  * `newfloor` branch — self-contained, no CMS.
  *
  * A plate's *rank* (0 = topmost floor band, going down) is bucketed across this
- * ordered list, so the crown maps to the penthouse duplex and the base to the
- * typical floor — top-to-bottom, just like the tower reads. Each plan carries
- * descriptive attributes only (config, floor band, elevation), never fabricated
- * RERA figures.
+ * ordered list, so the crown maps to the largest jodi and the base to the
+ * typical floor — top-to-bottom, just like the tower reads.
+ *
+ * Every area figure below is transcribed from the RERA CARPET / BALCONY / TOTAL
+ * table printed on the corresponding plan sheet, and the room list is what the
+ * sheet actually draws. Nothing here is estimated — if a sheet doesn't state it
+ * (floor numbers, pricing), it isn't in this file.
  */
-export const FLOOR_PLANS = [
-  { key: 'jodi-2', name: 'Duplex Jodi — Penthouse', band: 'Crown floors', base: '/img/plans/jodi-2', config: 'Jodi Duplex' },
-  { key: 'jodi-1', name: 'Jodi — Combined 3 BHK', band: 'Upper floors', base: '/img/plans/jodi-1', config: 'Jodi' },
-  { key: 'unit-6', name: 'Residence 06 — 3 BHK', band: 'High floors', base: '/img/plans/unit-6', config: '3 BHK' },
-  { key: 'unit-5', name: 'Residence 05 — 3 BHK', band: 'High floors', base: '/img/plans/unit-5', config: '3 BHK' },
-  { key: 'unit-4', name: 'Residence 04 — 3 BHK', band: 'Upper-mid floors', base: '/img/plans/unit-4', config: '3 BHK' },
-  { key: 'unit-3', name: 'Residence 03 — 3 BHK', band: 'Mid floors', base: '/img/plans/unit-3', config: '3 BHK' },
-  { key: 'unit-2', name: 'Residence 02 — 3 BHK', band: 'Lower-mid floors', base: '/img/plans/unit-2', config: '3 BHK' },
-  { key: 'unit-1', name: 'Residence 01 — 3 BHK', band: 'Lower floors', base: '/img/plans/unit-1', config: '3 BHK' },
-  { key: 'plate', name: 'Full Floor Plate', base: '/img/plans/plate', band: 'All residences, one level', config: 'Full floor' },
-  { key: 'typical', name: 'Typical Floor Plan', base: '/img/plans/typical', band: 'Every standard floor', config: 'Reference' },
+
+/** Amenities a plan may carry, in the order they read as filter chips. Only
+ *  the ones that actually separate the plans are offered as filters; `utility`
+ *  and `deck` are on every residence, so they're detail, not a facet. */
+export const FEATURES = [
+  { key: 'study', label: 'Study' },
+  { key: 'gym', label: 'Home gym' },
+  { key: 'puja', label: 'Puja room' },
+  { key: 'dress', label: 'Dressing room' },
+  { key: 'powder', label: 'Powder room' },
+  { key: 'utility', label: 'Utility', detailOnly: true },
+  { key: 'deck', label: 'Deck', detailOnly: true },
 ]
+
+export const FEATURE_LABELS = Object.fromEntries(FEATURES.map((f) => [f.key, f.label]))
+
+/** The facets offered as filter chips — everything except the universal ones. */
+export const FEATURE_FILTERS = FEATURES.filter((f) => !f.detailOnly)
+
+/** Plan families. `reference` plans are whole-floor drawings, not a residence,
+ *  so they carry no carpet area. */
+export const PLAN_TYPES = [
+  { key: 'residence', label: '3 BHK' },
+  { key: 'jodi', label: 'Jodi · 5 BHK' },
+  { key: 'reference', label: 'Reference' },
+]
+
+export const FLOOR_PLANS = [
+  {
+    key: 'jodi-2',
+    name: 'Jodi 04-05 — 5 BHK',
+    sheet: 'Jodi Unit 04-05',
+    band: 'Crown floors',
+    base: '/img/plans/jodi-2',
+    config: 'Jodi · 5 BHK',
+    type: 'jodi',
+    bedrooms: 5,
+    carpet: { sqm: 192.35, sqft: 2040.76 },
+    balcony: { sqm: 7.46, sqft: 80.3 },
+    total: { sqm: 199.81, sqft: 2150.75 },
+    features: ['study', 'puja', 'dress', 'utility', 'deck'],
+    living: '25’7" × 10’10"',
+  },
+  {
+    key: 'jodi-1',
+    name: 'Jodi 01-02 — 5 BHK',
+    sheet: 'Jodi Unit 01-02',
+    band: 'Upper floors',
+    base: '/img/plans/jodi-1',
+    config: 'Jodi · 5 BHK',
+    type: 'jodi',
+    bedrooms: 5,
+    carpet: { sqm: 217.78, sqft: 2344.18 },
+    balcony: { sqm: 8.44, sqft: 90.85 },
+    total: { sqm: 226.22, sqft: 2435.03 },
+    features: ['study', 'gym', 'puja', 'dress', 'powder', 'utility', 'deck'],
+    living: '23’6" × 19’1"',
+  },
+  {
+    key: 'unit-6',
+    name: 'Residence 06 — 3 BHK',
+    sheet: 'Unit 6 — 3 BHK',
+    band: 'High floors',
+    base: '/img/plans/unit-6',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 86.78, sqft: 934.1 },
+    balcony: { sqm: 3.05, sqft: 32.83 },
+    total: { sqm: 89.83, sqft: 966.93 },
+    features: ['utility', 'deck'],
+    living: '10’0" × 13’8"',
+  },
+  {
+    key: 'unit-5',
+    name: 'Residence 05 — 3 BHK',
+    sheet: 'Unit 5 — 3 BHK',
+    band: 'High floors',
+    base: '/img/plans/unit-5',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 96.58, sqft: 1039.59 },
+    balcony: { sqm: 3.74, sqft: 40.26 },
+    total: { sqm: 100.32, sqft: 1079.84 },
+    features: ['utility', 'deck'],
+    living: '19’1" × 11’6"',
+  },
+  {
+    key: 'unit-4',
+    name: 'Residence 04 — 3 BHK',
+    sheet: 'Unit 4 — 3 BHK',
+    band: 'Upper-mid floors',
+    base: '/img/plans/unit-4',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 95.77, sqft: 1030.87 },
+    balcony: { sqm: 3.72, sqft: 40.04 },
+    total: { sqm: 99.49, sqft: 1070.91 },
+    features: ['utility', 'deck'],
+    living: '19’1" × 11’6"',
+  },
+  {
+    key: 'unit-3',
+    name: 'Residence 03 — 3 BHK',
+    sheet: 'Unit 3 — 3 BHK',
+    band: 'Mid floors',
+    base: '/img/plans/unit-3',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 101.57, sqft: 1093.3 },
+    balcony: { sqm: 4.46, sqft: 48.01 },
+    total: { sqm: 106.03, sqft: 1141.31 },
+    features: ['powder', 'utility', 'deck'],
+    living: '10’0" × 14’7"',
+  },
+  {
+    key: 'unit-2',
+    name: 'Residence 02 — 3 BHK',
+    sheet: 'Unit 2 — 3 BHK',
+    band: 'Lower-mid floors',
+    base: '/img/plans/unit-2',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 108.61, sqft: 1169.08 },
+    balcony: { sqm: 4.19, sqft: 45.1 },
+    total: { sqm: 112.8, sqft: 1214.18 },
+    features: ['puja', 'dress', 'powder', 'utility', 'deck'],
+    living: '19’0" × 11’6"',
+  },
+  {
+    key: 'unit-1',
+    name: 'Residence 01 — 3 BHK',
+    sheet: 'Unit 1 — 3 BHK',
+    band: 'Lower floors',
+    base: '/img/plans/unit-1',
+    config: '3 BHK',
+    type: 'residence',
+    bedrooms: 3,
+    carpet: { sqm: 109.17, sqft: 1175.11 },
+    balcony: { sqm: 4.25, sqft: 45.75 },
+    total: { sqm: 113.42, sqft: 1220.85 },
+    features: ['puja', 'dress', 'powder', 'utility', 'deck'],
+    living: '19’0" × 11’6"',
+  },
+  {
+    key: 'plate',
+    name: 'Full Floor Plate',
+    sheet: 'Full floor plate',
+    base: '/img/plans/plate',
+    band: 'All residences, one level',
+    config: 'Full floor',
+    type: 'reference',
+    bedrooms: null,
+    carpet: null,
+    balcony: null,
+    total: null,
+    features: [],
+  },
+  {
+    key: 'typical',
+    name: 'Typical Floor Plan',
+    sheet: 'Typical floor plan',
+    base: '/img/plans/typical',
+    band: 'Every standard floor',
+    config: 'Reference',
+    type: 'reference',
+    bedrooms: null,
+    carpet: null,
+    balcony: null,
+    total: null,
+    features: [],
+  },
+]
+
+/** Carpet-area extent across the plans that state one, rounded outward to a
+ *  round number so the slider ends land somewhere legible. */
+export const AREA_BOUNDS = (() => {
+  const areas = FLOOR_PLANS.filter((p) => p.carpet).map((p) => p.carpet.sqft)
+  return {
+    min: Math.floor(Math.min(...areas) / 10) * 10,
+    max: Math.ceil(Math.max(...areas) / 10) * 10,
+    step: 10,
+  }
+})()
+
+export const SORT_OPTIONS = [
+  { value: 'default', label: 'Tower order' },
+  { value: 'area-desc', label: 'Carpet area · large to small' },
+  { value: 'area-asc', label: 'Carpet area · small to large' },
+  { value: 'name', label: 'Name · A to Z' },
+]
+
+/** Whole square feet with a thousands separator — the sheets print two
+ *  decimals, which is more precision than a list row needs. */
+export const sqft = (n) => Math.round(n).toLocaleString('en-US')
+
+/** Everything a plan is searched against, lower-cased once per plan. */
+const haystack = (p) =>
+  [p.name, p.sheet, p.config, p.band, ...(p.features ?? []).map((f) => FEATURE_LABELS[f])]
+    .join(' ')
+    .toLowerCase()
+
+const HAYSTACKS = Object.fromEntries(FLOOR_PLANS.map((p) => [p.key, haystack(p)]))
+
+/**
+ * Apply the search-by-unit facets. `types` and `features` are Sets — empty
+ * means "no constraint", the same convention the filter chips read from.
+ * Reference plans state no carpet area, so they drop out as soon as the area
+ * range is narrowed off its full extent.
+ */
+export const filterPlans = ({ query, types, features, area, sortBy }) => {
+  const q = query.trim().toLowerCase()
+  const narrowed = area[0] > AREA_BOUNDS.min || area[1] < AREA_BOUNDS.max
+
+  const out = FLOOR_PLANS.filter((p) => {
+    if (q && !HAYSTACKS[p.key].includes(q)) return false
+    if (types.size && !types.has(p.type)) return false
+    if (features.size && ![...features].every((f) => p.features.includes(f))) return false
+    if (p.carpet) {
+      if (p.carpet.sqft < area[0] || p.carpet.sqft > area[1]) return false
+    } else if (narrowed) return false
+    return true
+  })
+
+  switch (sortBy) {
+    case 'area-desc':
+      return [...out].sort((a, b) => (b.carpet?.sqft ?? -1) - (a.carpet?.sqft ?? -1))
+    case 'area-asc':
+      return [...out].sort((a, b) => (a.carpet?.sqft ?? Infinity) - (b.carpet?.sqft ?? Infinity))
+    case 'name':
+      return [...out].sort((a, b) => a.name.localeCompare(b.name))
+    default:
+      return out
+  }
+}
 
 /** Bucket a plate's rank (0 = topmost) among `count` plates into one plan. */
 export const planForPlateRank = (rank, count) => {
@@ -30,6 +260,15 @@ export const planForPlateRank = (rank, count) => {
   )
   return FLOOR_PLANS[bucket]
 }
+
+/**
+ * Floor number for a plate, counted straight off the plates that are drawn on
+ * the elevation: the lowest plate is floor 1 and it climbs one per plate to the
+ * crown. Ranks arrive top-to-bottom (0 = crown), so invert — a tower with N
+ * plates reads 1…N from the base up. This is the honest count of what's traced,
+ * not a fabricated storey table.
+ */
+export const floorFromRank = (rank, count) => Math.max(1, count - rank)
 
 /** The two tower elevations that carry floor-plate SVGs, in cycle order. Each is
  *  one still frame from the orbit render + its traced plate SVG (attached in the

@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
-import { VIEWS } from '../lib/views'
+import { MENU_ITEMS } from '../lib/views'
 
 /** Per-row copy. Same figures as the old menu page — the sheet no longer swaps
  *  a background plate on hover, so these carry all the flavour now. */
@@ -9,6 +9,7 @@ const META = {
   amenities: { blurb: 'Ten thousand square feet of amenity', stat: '12 spaces' },
   location: { blurb: 'Balkum, and everything from it', stat: '1.2 km' },
   floorplan: { blurb: 'Nine plates, 3 BHK and Jodi', stat: '9 plates' },
+  gallery: { blurb: 'The renders, ground to sky', stat: '23 frames' },
   enquire: { blurb: 'Request the drawing set', stat: 'Direct' },
 }
 
@@ -82,7 +83,7 @@ const OrbitMenu = ({ show, onSelect }) => {
           ].join(' ')}
         >
           <ul className="py-1">
-            {VIEWS.map((v, i) => (
+            {MENU_ITEMS.map((v, i) => (
               <li key={v.id}>
                 <button
                   type="button"

@@ -321,15 +321,34 @@
   }
 }
 
-/* In the floorplan explorer the plates are the selector: they rest a touch
-   more visible than on the orbit, and the chosen floor stays lit (brass) so
-   the selection reads even when the cursor leaves. */
+/* In the floorplan explorer the plates are the selector. They rest as a faint
+   veil so the facade isn't one gold block — you read individual floors because
+   only the hovered floor lights up, and the chosen floor stays lit (brass). */
 .floor-explorer .cls-1 {
-  fill-opacity: 0.4;
+  fill-opacity: 0.12;
 }
 .floor-explorer .cls-1.is-active {
   fill: #ffe6a0 !important;
   fill-opacity: 0.95 !important;
+}
+
+/* Gallery — a slow Ken Burns drift on the active render for a touch of life.
+   Runs on the sharp <img>, independent of the slide's clip-wipe transition. */
+@keyframes gallery-kb {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+.gallery-kb {
+  animation: gallery-kb 18s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-kb {
+    animation: none;
+  }
 }
 
 /* Hotspot anchor — a ring that breathes out from the dot. */
@@ -374,6 +393,82 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ============================================================
+   Dual-thumb range — the carpet-area filter in the unit search.
+   Two native sliders sit stacked over one track we draw ourselves:
+   the inputs go transparent and pass pointer events straight
+   through, so only the thumbs are grabbable and both stay reachable.
+   Left unlayered on purpose — it must outrank the utilities layer.
+   ============================================================ */
+.range-dual {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+.range-dual:focus {
+  outline: none;
+}
+
+.range-dual::-webkit-slider-runnable-track {
+  height: 1.25rem;
+  background: transparent;
+}
+
+.range-dual::-moz-range-track {
+  height: 1.25rem;
+  background: transparent;
+}
+
+.range-dual::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 13px;
+  height: 13px;
+  /* (track 20px − thumb 13px) / 2, since the runnable track is full height. */
+  margin-top: 3.5px;
+  border-radius: 9999px;
+  /* Inked ring on a paper fill: the explorer's filter panel now sits on the
+     cream field, where the old brass-lift-on-dark thumb all but vanished. */
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+
+.range-dual::-moz-range-thumb {
+  pointer-events: auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+
+.range-dual:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.range-dual:focus-visible::-webkit-slider-thumb {
+  outline: 1px solid var(--color-brass-lift);
+  outline-offset: 2px;
+}
+
+.range-dual:focus-visible::-moz-range-thumb {
+  outline: 1px solid var(--color-brass-lift);
+  outline-offset: 2px;
 }
 
 /* Screen-reader-only. */

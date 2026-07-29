@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { countUp } from '../animations/countUp'
@@ -10,6 +10,7 @@ import {
   framePath,
   wrapFrame,
 } from '../lib/orbit'
+import { floorFromRank } from '../lib/floorplans'
 import Logo from './Logo'
 import OrbitMenu from './OrbitMenu'
 import FloorExplorer from './FloorExplorer'
@@ -265,6 +266,8 @@ const Landing = ({ onView, onPoint }) => {
   const enquireRef = useRef(null)
   const hintRef = useRef(null)
   const overlayRef = useRef(null)
+  const floorTagRef = useRef(null)
+  const floorTagShownRef = useRef(false)
   // Drives the ambient "light running down the plates" loop and its hover pause.
   const overlayAnim = useRef({
     hovering: false,
@@ -311,6 +314,16 @@ const Landing = ({ onView, onPoint }) => {
   // `openId` bumps on each open so the explorer remounts fresh (its initial
   // elevation/floor come from these props via useState initialisers).
   const [floorDetail, setFloorDetail] = useState({ open: false, frame: 40, rank: 0, openId: 0 })
+  // Floor-number tag that tracks the hovered plate on the orbit (Floorplan mode),
+  // before the explorer opens. Viewport coords (root is fixed inset-0).
+  const [floorHover, setFloorHover] = useState(null)
+
+  // MUST be memoised. React 19 diffs `dangerouslySetInnerHTML` by object
+  // identity, not by the html string — a fresh `{__html}` literal on every
+  // render makes React re-write innerHTML, which destroys and rebuilds all the
+  // plate nodes and silently drops the hover listeners bound to them (the tag
+  // would then freeze on the first hovered floor and never return).
+  const overlayInner = useMemo(() => ({ __html: overlayHtml }), [overlayHtml])
 
   const showFrame = useCallback((frame) => {
     setActiveFrame(frame)
@@ -486,6 +499,10 @@ const Landing = ({ onView, onPoint }) => {
       if (target === from) return
       animatingRef.current = true
       setActiveFrame(null)
+      // Turning away from a plate — drop the floor tag so it never rides along
+      // to the next frame; it only comes back on a fresh plate hover.
+      floorTagShownRef.current = false
+      setFloorHover(null)
       tweenRef.current?.kill()
       tweenRef.current = gsap.to(stateRef.current, {
         pos: target,
@@ -616,6 +633,8 @@ const Landing = ({ onView, onPoint }) => {
       .map((o) => o.p)
     const rank = plates.indexOf(plate)
     if (rank < 0) return
+    floorTagShownRef.current = false
+    setFloorHover(null)
     setFloorDetail((d) => ({ open: true, frame: norm(stateRef.current.pos), rank, openId: d.openId + 1 }))
   }, [])
 
@@ -742,6 +761,67 @@ const Landing = ({ onView, onPoint }) => {
     { dependencies: [hasOverlay, activeFrame], scope: rootRef },
   )
 
+  // Show the floor tag ONLY while the cursor is directly over a plate. Bind
+  // mouseenter/mouseleave straight to each plate (not the container): the gaps
+  // between plates and the sky are pointer-events-none, so container-level
+  // mouseover/out can miss the plate↔gap boundary and leave the tag stuck. A
+  // per-plate `mouseleave` is unambiguous — off the plate, the tag is gone.
+  useEffect(() => {
+    const root = overlayRef.current
+    if (!root || mode !== 'floorplan' || !hasOverlay) return undefined
+    const plates = Array.from(root.querySelectorAll('.cls-1'))
+      .map((p) => ({ p, y: p.getBoundingClientRect().top }))
+      .sort((a, b) => a.y - b.y)
+      .map((o) => o.p)
+    if (!plates.length) return undefined
+
+    const onLeave = () => {
+      floorTagShownRef.current = false
+      setFloorHover(null)
+    }
+    const wired = plates.map((plate, i) => {
+      const onEnter = () => {
+        const r = plate.getBoundingClientRect()
+        setFloorHover({
+          floor: floorFromRank(i, plates.length),
+          top: r.top + r.height / 2,
+          left: r.right,
+        })
+      }
+      plate.addEventListener('mouseenter', onEnter)
+      plate.addEventListener('mouseleave', onLeave)
+      return { plate, onEnter }
+    })
+    return () => {
+      wired.forEach(({ plate, onEnter }) => {
+        plate.removeEventListener('mouseenter', onEnter)
+        plate.removeEventListener('mouseleave', onLeave)
+      })
+    }
+  }, [hasOverlay, activeFrame, mode])
+
+  // Floor tag: ease it in on first hover, then glide it between floors as the
+  // cursor moves plate to plate. A plain effect (not useGSAP) so re-runs don't
+  // revert the context and snap the tag back to the corner between glides.
+  useEffect(() => {
+    const el = floorTagRef.current
+    const active = floorHover && mode === 'floorplan' && !floorDetail.open
+    if (!el || !active) return
+    const { top, left } = floorHover
+    if (prefersReducedMotion()) {
+      gsap.set(el, { top, left, yPercent: -50, autoAlpha: 1, scale: 1 })
+      floorTagShownRef.current = true
+      return
+    }
+    if (!floorTagShownRef.current) {
+      floorTagShownRef.current = true
+      gsap.set(el, { top, left, yPercent: -50, autoAlpha: 0, scale: 0.8 })
+      gsap.to(el, { autoAlpha: 1, scale: 1, duration: 0.34, ease: 'back.out(1.7)' })
+    } else {
+      gsap.to(el, { top, left, autoAlpha: 1, duration: 0.32, ease: 'power3.out', overwrite: 'auto' })
+    }
+  }, [floorHover, mode, floorDetail.open])
+
   // Fade the orbit to black, then route to a point's showcase. The showcase
   // fades its media up from the same black, so the two meet without a cut.
   const leaveToPoint = (id) => {
@@ -781,10 +861,14 @@ const Landing = ({ onView, onPoint }) => {
         aria-hidden={hasOverlay ? undefined : 'true'}
         onClick={onFloorPlateClick}
         onMouseEnter={() => overlayAnim.current.onEnter()}
-        onMouseLeave={() => overlayAnim.current.onLeave()}
+        onMouseLeave={() => {
+          overlayAnim.current.onLeave()
+          floorTagShownRef.current = false
+          setFloorHover(null)
+        }}
         style={{ left: 0, top: 0, width: 0, height: 0 }}
         className="floor-overlay pointer-events-none absolute z-8 opacity-0 outline-none"
-        dangerouslySetInnerHTML={{ __html: overlayHtml }}
+        dangerouslySetInnerHTML={overlayInner}
       />
 
       {/* Legibility scrims — the renders run bright, so top and bottom get a
@@ -893,6 +977,24 @@ const Landing = ({ onView, onPoint }) => {
           onNavigate={() => (spot.to ? leaveToPoint(spot.to) : undefined)}
         />
       ))}
+
+      {/* Floor-number tag — pure text (no plate), tracking the hovered floor on
+          the orbit. Position + motion are driven by GSAP (see above). */}
+      {floorHover && mode === 'floorplan' && !floorDetail.open && (
+        <div
+          ref={floorTagRef}
+          className="pointer-events-none fixed left-0 top-0 z-30 pl-3 opacity-0 md:pl-4"
+        >
+          <span className="flex flex-col leading-none text-brass-lift [text-shadow:0_2px_20px_rgb(0_0_0/0.6),0_0_18px_rgb(217_193_88/0.35)]">
+            <span className="text-[9px] font-normal uppercase tracking-[0.3em] min-[430px]:text-[10px] md:text-[11px]">
+              Floor
+            </span>
+            <span className="t-fig text-[40px] leading-[0.9] min-[430px]:text-[48px] md:text-[56px] lg:text-[64px] 3xl:text-[76px]">
+              {floorHover.floor}
+            </span>
+          </span>
+        </div>
+      )}
 
       {/* Floorplan explorer — the split view. Opens on a floor-plate click in
           Floorplan mode; docks the building left with a plan on the right. */}
