@@ -1,8 +1,8 @@
 {
   "version": 8,
-  "name": "Runwal Zenith — Paper-Ink",
+  "name": "Runwal Zenith \u2014 Paper-Ink",
   "metadata": {
-    "comment": "Authored as a base, night palette baked in as the static default for zero-flash first paint. Zoom-dependent paint expressions (road-width interpolations, extrusion-height ramps, etc.) live here — never in mapTheme.js. Refine visually in Maputnik later — keep layer IDs stable, mapTheme.js's THEMED_LAYER_IDS is the contract."
+    "comment": "Authored as a base, night palette baked in as the static default for zero-flash first paint. Zoom-dependent paint expressions (road-width interpolations, extrusion-height ramps, etc.) live here \u2014 never in mapTheme.js. Refine visually in Maputnik later \u2014 keep layer IDs stable, mapTheme.js's THEMED_LAYER_IDS is the contract."
   },
   "glyphs": "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key={key}",
   "sources": {
@@ -17,7 +17,7 @@
       "id": "bg",
       "type": "background",
       "paint": {
-        "background-color": "#14110c"
+        "background-color": "#f7eedc"
       }
     },
     {
@@ -26,7 +26,7 @@
       "source": "openmaptiles",
       "source-layer": "landcover",
       "paint": {
-        "fill-color": "#1a1610",
+        "fill-color": "#fff7ea",
         "fill-opacity": 0.6,
         "fill-antialias": false
       }
@@ -55,7 +55,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#1a1610",
+        "fill-color": "#fff7ea",
         "fill-opacity": 0.4
       }
     },
@@ -65,7 +65,7 @@
       "source": "openmaptiles",
       "source-layer": "park",
       "paint": {
-        "fill-color": "#1a1610",
+        "fill-color": "#c7d8a0",
         "fill-opacity": 0.75
       }
     },
@@ -83,7 +83,7 @@
         1
       ],
       "paint": {
-        "fill-color": "#12171b",
+        "fill-color": "#c3e2ec",
         "fill-opacity": 0.92
       }
     },
@@ -93,7 +93,7 @@
       "source": "openmaptiles",
       "source-layer": "waterway",
       "paint": {
-        "line-color": "#12171b",
+        "line-color": "#9ecddb",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -117,9 +117,9 @@
       "source-layer": "building",
       "minzoom": 13,
       "paint": {
-        "fill-color": "#1a1610",
+        "fill-color": "#fff7ea",
         "fill-opacity": 0.85,
-        "fill-outline-color": "#14110c"
+        "fill-outline-color": "#f0e5d4"
       }
     },
     {
@@ -148,8 +148,8 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#4a453a",
-        "line-opacity": 0.25,
+        "line-color": "#c7c1b1",
+        "line-opacity": 0.5,
         "line-width": [
           "interpolate",
           [
@@ -190,8 +190,8 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#6f5d1e",
-        "line-opacity": 0.75,
+        "line-color": "#c7c1b1",
+        "line-opacity": 0.8,
         "line-width": [
           "interpolate",
           [
@@ -226,8 +226,8 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#a28a00",
-        "line-opacity": 0.85,
+        "line-color": "#c7c1b1",
+        "line-opacity": 0.9,
         "line-width": [
           "interpolate",
           [
@@ -268,7 +268,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#c2a83a",
+        "line-color": "#c7c1b1",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -301,7 +301,7 @@
         true
       ],
       "paint": {
-        "fill-extrusion-color": "#1e1913",
+        "fill-extrusion-color": "#f0e5d4",
         "fill-extrusion-height": [
           "interpolate",
           [
@@ -356,8 +356,8 @@
         6
       ],
       "paint": {
-        "line-color": "#4a453a",
-        "line-opacity": 0.3,
+        "line-color": "#c9bc9c",
+        "line-opacity": 0.4,
         "line-width": 0.6,
         "line-dasharray": [
           3,
@@ -418,8 +418,8 @@
         "text-letter-spacing": 0.08
       },
       "paint": {
-        "text-color": "#7a7263",
-        "text-halo-color": "#14110c",
+        "text-color": "#5c5748",
+        "text-halo-color": "#f7eedc",
         "text-halo-width": 1
       }
     },
@@ -477,8 +477,8 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#8a8272",
-        "text-halo-color": "#14110c",
+        "text-color": "#5c5748",
+        "text-halo-color": "#f7eedc",
         "text-halo-width": 1
       }
     },
@@ -534,8 +534,8 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#f4f1ea",
-        "text-halo-color": "#14110c",
+        "text-color": "#33302a",
+        "text-halo-color": "#f7eedc",
         "text-halo-width": 1
       }
     }

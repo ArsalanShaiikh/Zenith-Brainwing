@@ -366,6 +366,15 @@
   }
 }
 
+/* Scrollable, but the scrollbar itself never renders. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Screen-reader-only. */
 @utility sr {
   position: absolute;

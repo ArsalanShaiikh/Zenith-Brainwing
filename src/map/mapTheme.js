@@ -7,21 +7,23 @@
  * applyMapTheme(map, zenithTheme) on load is a no-op that asserts the contract
  * and gives one place to re-tune colours later.
  *
- * The map is deliberately dark — it reads as one more graded plate, with the
- * light glass destination panel floating over it, exactly like every other view.
+ * Palette lifted from the "Portraits from Life" brochure map (cream terrain,
+ * sky-blue water, sage parkland) rather than the previous dark ink/brass plate.
  */
 
-export const INK_BG = '#14110c'
-export const INK_MASS = '#1a1610'
-export const INK_3D = '#1e1913'
-export const SLATE = '#12171b'
-export const STRUCT = '#4a453a'
-export const BRASS_SHADOW = '#6f5d1e'
-export const BRASS = '#a28a00'
-export const BRASS_LIFT = '#c2a83a'
-export const BONE = '#8a8272'
-export const BONE_DIM = '#7a7263'
-export const PAPER = '#f4f1ea'
+export const CREAM = '#f7eedc'
+export const CREAM_MASS = '#fff7ea'
+export const CREAM_DEEP = '#f0e5d4'
+export const SKY = '#c3e2ec'
+export const SKY_DEEP = '#9ecddb'
+export const SAGE = '#c7d8a0'
+export const ROAD_FAINT = '#c7c1b1'
+export const ROAD_MID = '#c7c1b1'
+export const ROAD_MAIN = '#c7c1b1'
+export const ROAD_HIGHWAY = '#c7c1b1'
+export const LINE_SOFT = '#c9bc9c'
+export const INK = '#33302a'
+export const INK_DIM = '#5c5748'
 
 /** The full allow-list of themeable layer ids. Must match zenith-style.json. */
 export const THEMED_LAYER_IDS = [
@@ -44,32 +46,32 @@ export const THEMED_LAYER_IDS = [
 ]
 
 export const zenithTheme = {
-  bg: { 'background-color': INK_BG },
-  landcover: { 'fill-color': INK_MASS, 'fill-opacity': 0.6 },
-  landuse: { 'fill-color': INK_MASS, 'fill-opacity': 0.4 },
-  park: { 'fill-color': INK_MASS, 'fill-opacity': 0.75 },
-  water: { 'fill-color': SLATE, 'fill-opacity': 0.92 },
-  waterway: { 'line-color': SLATE, 'line-opacity': 1 },
-  'road-minor': { 'line-color': STRUCT, 'line-opacity': 0.25 },
-  'road-secondary': { 'line-color': BRASS_SHADOW, 'line-opacity': 0.75 },
-  'road-primary': { 'line-color': BRASS, 'line-opacity': 0.85 },
-  'road-motorway': { 'line-color': BRASS_LIFT, 'line-opacity': 1 },
-  building: { 'fill-color': INK_MASS, 'fill-opacity': 0.85 },
-  'building-3d': { 'fill-extrusion-color': INK_3D, 'fill-extrusion-opacity': 0.9 },
-  boundary: { 'line-color': STRUCT, 'line-opacity': 0.3 },
+  bg: { 'background-color': CREAM },
+  landcover: { 'fill-color': CREAM_MASS, 'fill-opacity': 0.6 },
+  landuse: { 'fill-color': CREAM_MASS, 'fill-opacity': 0.4 },
+  park: { 'fill-color': SAGE, 'fill-opacity': 0.75 },
+  water: { 'fill-color': SKY, 'fill-opacity': 0.92 },
+  waterway: { 'line-color': SKY_DEEP, 'line-opacity': 1 },
+  'road-minor': { 'line-color': ROAD_FAINT, 'line-opacity': 0.5 },
+  'road-secondary': { 'line-color': ROAD_MID, 'line-opacity': 0.8 },
+  'road-primary': { 'line-color': ROAD_MAIN, 'line-opacity': 0.9 },
+  'road-motorway': { 'line-color': ROAD_HIGHWAY, 'line-opacity': 1 },
+  building: { 'fill-color': CREAM_MASS, 'fill-opacity': 0.85 },
+  'building-3d': { 'fill-extrusion-color': CREAM_DEEP, 'fill-extrusion-opacity': 0.9 },
+  boundary: { 'line-color': LINE_SOFT, 'line-opacity': 0.4 },
   'label-place-minor': {
-    'text-color': BONE,
-    'text-halo-color': INK_BG,
+    'text-color': INK_DIM,
+    'text-halo-color': CREAM,
     'text-halo-width': 1,
   },
   'label-place-major': {
-    'text-color': PAPER,
-    'text-halo-color': INK_BG,
+    'text-color': INK,
+    'text-halo-color': CREAM,
     'text-halo-width': 1,
   },
   'label-road': {
-    'text-color': BONE_DIM,
-    'text-halo-color': INK_BG,
+    'text-color': INK_DIM,
+    'text-halo-color': CREAM,
     'text-halo-width': 1,
   },
 }
