@@ -16,7 +16,8 @@
       "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive7.mjs\")",
       "Bash(ls \"C:/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/memory/\" 2>/dev/null && echo \"--- MEMORY.md ---\" && cat \"C:/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/memory/MEMORY.md\" 2>/dev/null || echo \"\\(empty or missing\\)\")",
       "Read(//c/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/**)",
-      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive8.mjs\")"
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive8.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive9.mjs\")"
     ]
   }
 }
