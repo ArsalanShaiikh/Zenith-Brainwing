@@ -2,34 +2,41 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { ViewProvider } from './context/ViewContext'
 import { VIEWS } from './lib/views'
 import Landing from './components/Landing'
-import Menu from './components/Menu'
 import Shell from './components/Shell'
+import Showcase from './views/Showcase'
+import Gallery from './views/Gallery'
 
 /**
  * Routes are the single source of truth for where you are:
- *   /            landing gate
- *   /menu        destination menu
- *   /:viewId     the app, showing that panel
+ *   /            the orbit — it now hosts the menu (as an in-orbit overlay) and
+ *                the Amenities / Floorplan modes; there is no separate menu page
+ *   /showcase/:id  a point's media
+ *   /:viewId     the app, showing that panel (Views / Location / Enquire)
  *
- * The shell only mounts on a view route. That is deliberate — keeping it
- * mounted under the menu is what used to let the previously-open panel show
- * through during the hand-over.
+ * The shell only mounts on a view route. Its back button returns to the orbit,
+ * which reopens on the menu frame.
  */
 const AppRoutes = () => {
   const navigate = useNavigate()
 
   return (
     <Routes>
-      <Route path="/" element={<Landing onEnter={() => navigate('/menu')} />} />
       <Route
-        path="/menu"
-        element={<Menu onPick={(id) => navigate(`/${id}`)} />}
+        path="/"
+        element={
+          <Landing
+            onView={(id) => navigate(`/${id}`)}
+            onPoint={(pid) => navigate(`/showcase/${pid}`)}
+          />
+        }
       />
+      <Route path="/showcase/:id" element={<Showcase />} />
+      <Route path="/gallery" element={<Gallery onBack={() => navigate('/')} />} />
       {VIEWS.map((v) => (
         <Route
           key={v.id}
           path={`/${v.id}`}
-          element={<Shell viewId={v.id} onMenu={() => navigate('/menu')} />}
+          element={<Shell viewId={v.id} onMenu={() => navigate('/')} />}
         />
       ))}
       <Route path="*" element={<Navigate to="/" replace />} />

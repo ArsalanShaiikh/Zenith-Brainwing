@@ -40,7 +40,11 @@ const Enquire = ({ active }) => {
           'card grid w-full max-w-[560px] gap-5 overflow-y-auto overscroll-contain p-5',
           'max-h-full [touch-action:pan-y]',
           'sm:p-6 md:max-w-[720px] md:gap-8 md:p-8',
-          'lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-10 lg:overflow-hidden',
+          // Keep it scrollable (not `overflow-hidden`) so a short-height desktop
+          // viewport can reach the whole form instead of clipping it; compact
+          // the gaps on short screens so it usually fits without scrolling.
+          'lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-10',
+          'short:gap-3 short:p-4 md:short:gap-4',
           '3xl:max-w-[860px] 3xl:p-10',
         ].join(' ')}
       >

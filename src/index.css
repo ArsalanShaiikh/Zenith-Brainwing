@@ -173,7 +173,9 @@
 @utility t-label {
   font-family: var(--font-ui);
   font-weight: 400;
-  font-size: 10px;
+  /* Flat 10px up to ~1900px, then grows so labels don't shrink to specks on
+     4xl/5xl (2560–3840px) screens. */
+  font-size: clamp(10px, 0.52vw, 13px);
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -185,54 +187,86 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Opaque paper card. The workhorse container — solid, never translucent. */
-@utility card {
-  background: var(--color-paper);
-  color: var(--color-ink);
-  border-radius: var(--radius-plate);
-  box-shadow: 0 18px 50px -20px rgb(0 0 0 / 0.5);
-}
+/* ------------------------------------------------------------------
+   Frosted surfaces. Every light-themed panel in the app uses one of
+   these three, so the glass reads as one material throughout.
 
-/* Frosted panel — light, and genuinely thin.
    The trick is brightness() inside backdrop-filter: it lifts the blurred
    backdrop *before* the tint lands. Without it a pale tint over this dark
    imagery has to reach ~0.86 alpha to stay light, at which point it is 86%
-   paint and nothing shows through. Lifting the backdrop first means a ~0.5
-   tint reads light while still carrying the plate's shapes and colour
-   through it. Contents stay on the ink scale.
-   0.66 / brightness 3.8 came out of a sweep: it holds the panel at ~62%
-   luminance with the small labels at 4.85:1, while keeping the backdrop
-   variation across the panel near its peak (0.199). Pushing lighter than
-   this starts trading away the very transparency it is here for. */
-@utility glass {
-  background: rgb(252 250 246 / 0.66);
-  backdrop-filter: blur(24px) brightness(3.8) saturate(1.3);
-  -webkit-backdrop-filter: blur(24px) brightness(3.8) saturate(1.3);
+   paint and nothing shows through — a flat card wearing a blur.
+
+   0.72 / brightness 4.2 came out of a sweep measuring three things at once:
+   panel lightness, worst-corner contrast, and how much the backdrop still
+   varies across the panel (a flat card measures ~0.09; these measure ~0.18).
+   Brightness saturates as a lever — 3.8 to 5.4 buys only 0.4 of contrast —
+   so alpha does the work. 0.72 clears AA in every panel corner while
+   measuring the same see-through as 0.66, which did not.
+   ------------------------------------------------------------------ */
+
+/* NB: author the STANDARD `backdrop-filter` only — LightningCSS (Tailwind's
+   build) adds the `-webkit-` prefix itself. Writing both here made it drop the
+   unprefixed one in the production build, so Firefox (which has no
+   `-webkit-backdrop-filter`) lost the frosted lift and the panels went
+   see-through. See the `@supports` fallback below for no-support browsers. */
+@utility card {
+  background: rgb(252 250 246 / 0.72);
+  backdrop-filter: blur(24px) brightness(4.2) saturate(1.3);
   border: 1px solid rgb(255 255 255 / 0.55);
   border-radius: var(--radius-plate);
+  color: var(--color-ink);
   box-shadow:
     0 26px 60px -24px rgb(0 0 0 / 0.5),
     inset 0 1px 0 0 rgb(255 255 255 / 0.7);
 }
 
-/* No backdrop-filter means no brightness lift either, so the tint alone has
-   to keep the panel light. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background: rgb(246 243 237 / 0.93);
-  }
+/* Alias — same material, named for the places that read better as "glass". */
+@utility glass {
+  background: rgb(252 250 246 / 0.72);
+  backdrop-filter: blur(24px) brightness(4.2) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.55);
+  border-radius: var(--radius-plate);
+  color: var(--color-ink);
+  box-shadow:
+    0 26px 60px -24px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.7);
 }
 
+/* Just the material, no shape. For icon buttons, caption plates and any
+   other surface that brings its own radius and layout. */
+@utility glass-surface {
+  background: rgb(252 250 246 / 0.72);
+  backdrop-filter: blur(20px) brightness(4.2) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.5);
+  color: var(--color-ink);
+}
+
+/* Pill-shaped glass: status readout, level tags. */
 @utility chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding-inline: 12px;
-  background: var(--color-paper);
-  color: var(--color-ink);
+  gap: clamp(8px, 0.5vw, 12px);
+  /* Grows on very large screens so the status/level pills don't read as specks
+     on 4K; flat 30px below ~1900px. */
+  height: clamp(30px, 1.65vw, 42px);
+  padding-inline: clamp(12px, 0.8vw, 20px);
+  background: rgb(252 250 246 / 0.72);
+  backdrop-filter: blur(20px) brightness(4.2) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.5);
   border-radius: 999px;
+  color: var(--color-ink);
   white-space: nowrap;
+}
+
+/* No backdrop-filter means no brightness lift either, so the tint alone has
+   to keep these surfaces light. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card,
+  .glass,
+  .glass-surface,
+  .chip {
+    background: rgb(246 243 237 / 0.93);
+  }
 }
 
 /* Film grain. A data-URI turbulence tile stepped at 8fps — cheap, and the
@@ -252,10 +286,189 @@
   }
 }
 
+/* Floor-highlight overlay — an inlined SVG of stacked floor plates laid over
+   the tower. Colour is `currentColor` (theme brass). The root svg is click-
+   through so dragging still works over the frame; only the painted plates are
+   interactive, and each lifts on its own hover (a floor-by-floor read). */
+.floor-overlay {
+  color: var(--color-brass-lift);
+}
+.floor-overlay svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgb(217 193 88 / 0.25));
+}
+/* Alpha lives per-plate (not a group opacity) so a hovered plate can lift well
+   above the resting tint instead of being capped by it. */
+.floor-overlay .cls-1 {
+  pointer-events: auto;
+  cursor: pointer;
+  fill: currentColor;
+  fill-opacity: 0.32;
+  transition: fill 0.2s ease, fill-opacity 0.2s ease;
+}
+/* !important so a hover always reads over the ambient cascade, which drives
+   fill-opacity through inline styles (GSAP). */
+.floor-overlay .cls-1:hover {
+  fill: #fff0ad !important;
+  fill-opacity: 0.98 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .floor-overlay .cls-1 {
+    transition: none;
+  }
+}
+
+/* In the floorplan explorer the plates are the selector. They rest as a faint
+   veil so the facade isn't one gold block — you read individual floors because
+   only the hovered floor lights up, and the chosen floor stays lit (brass). */
+.floor-explorer .cls-1 {
+  fill-opacity: 0.12;
+}
+.floor-explorer .cls-1.is-active {
+  fill: #ffe6a0 !important;
+  fill-opacity: 0.95 !important;
+}
+
+/* Gallery — a slow Ken Burns drift on the active render for a touch of life.
+   Runs on the sharp <img>, independent of the slide's clip-wipe transition. */
+@keyframes gallery-kb {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+.gallery-kb {
+  animation: gallery-kb 18s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-kb {
+    animation: none;
+  }
+}
+
+/* Hotspot anchor — a ring that breathes out from the dot. */
+@keyframes tag-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Drag affordance — the double chevron drifts side to side. */
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .grain {
     animation: none;
   }
+  .animate-\[drift_2\.4s_ease-in-out_infinite\] {
+    animation: none;
+  }
+  [data-tag-ring] {
+    animation: none !important;
+  }
+}
+
+/* Scrollable, but the scrollbar itself never renders. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============================================================
+   Dual-thumb range — the carpet-area filter in the unit search.
+   Two native sliders sit stacked over one track we draw ourselves:
+   the inputs go transparent and pass pointer events straight
+   through, so only the thumbs are grabbable and both stay reachable.
+   Left unlayered on purpose — it must outrank the utilities layer.
+   ============================================================ */
+.range-dual {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+.range-dual:focus {
+  outline: none;
+}
+
+.range-dual::-webkit-slider-runnable-track {
+  height: 1.25rem;
+  background: transparent;
+}
+
+.range-dual::-moz-range-track {
+  height: 1.25rem;
+  background: transparent;
+}
+
+.range-dual::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 13px;
+  height: 13px;
+  /* (track 20px − thumb 13px) / 2, since the runnable track is full height. */
+  margin-top: 3.5px;
+  border-radius: 9999px;
+  /* Inked ring on a paper fill: the explorer's filter panel now sits on the
+     cream field, where the old brass-lift-on-dark thumb all but vanished. */
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+
+.range-dual::-moz-range-thumb {
+  pointer-events: auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+
+.range-dual:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.range-dual:focus-visible::-webkit-slider-thumb {
+  outline: 1px solid var(--color-brass-lift);
+  outline-offset: 2px;
+}
+
+.range-dual:focus-visible::-moz-range-thumb {
+  outline: 1px solid var(--color-brass-lift);
+  outline-offset: 2px;
 }
 
 /* Screen-reader-only. */
