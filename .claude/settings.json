@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm install marzipano --no-audit --no-fund)",
+      "PowerShell(npx eslint src/components/Pano.jsx src/views/Views.jsx src/lib/panos.js src/data_Day.js src/data_Evening.js 2>&1)",
+      "PowerShell(npm run dev -- --port 5199 --strictPort)",
+      "PowerShell($c = @\\(\"$env:ProgramFiles\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\"${env:ProgramFiles\\(x86\\)}\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\"$env:ProgramFiles\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\",\"${env:ProgramFiles\\(x86\\)}\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\); foreach \\($p in $c\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND $p\" } })",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive2.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive3.mjs\")",
+      "Bash(cd \"c:/Users/Hujrgs/Desktop/zenith/node_modules/marzipano/src\" && echo \"=== Timer.js ===\" && cat util/Timer.js 2>/dev/null | sed -n '1,200p' | grep -n \"setDuration\\\\|start\\\\|Infinity\\\\|_duration\\\\|setTimeout\" ; echo; echo \"=== Viewer idle 595,645 ===\" && sed -n '595,650p' ../src/Viewer.js 2>/dev/null || sed -n '595,650p' Viewer.js)",
+      "Read(//c/Users/Hujrgs/Desktop/src/**)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive4.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive5.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive6.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive7.mjs\")",
+      "Bash(ls \"C:/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/memory/\" 2>/dev/null && echo \"--- MEMORY.md ---\" && cat \"C:/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/memory/MEMORY.md\" 2>/dev/null || echo \"\\(empty or missing\\)\")",
+      "Read(//c/Users/Hujrgs/.claude/projects/c--Users-Hujrgs-Desktop-zenith/**)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive8.mjs\")",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Hujrgs\\\\Desktop\\\\zenith\"; $sp=\"C:\\\\Users\\\\Hujrgs\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Hujrgs-Desktop-zenith\\\\fbd4abe8-3b9c-413c-aeba-d722ad09610a\\\\scratchpad\"; $env:OUT_DIR=$sp; node \"$sp\\\\drive9.mjs\")"
+    ]
+  }
+}
