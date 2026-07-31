@@ -1,25 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  AREA_BOUNDS,
-  FEATURE_FILTERS,
-  FEATURE_LABELS,
-  PLAN_BY_KEY,
-  PLAN_TYPES,
-  SORT_OPTIONS,
-  sqft,
-} from '../lib/floorplans'
+import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sqft } from '../lib/floorplans'
 
 /**
  * Search by unit — the faceted half of the floorplan explorer, ported from the
  * `filtering-plans` prototype and re-cut in the Zenith palette.
  *
- * Each result row carries a small thumbnail of its plan sheet alongside the
- * name and stated figures, so the filtered list reads visually, not just as
- * text. The full sheet still renders once, large, on the right.
+ * Results themselves render as a card grid alongside this panel (see
+ * UnitGrid) — this column stays limited to facets, compare, and enquiry.
  */
-const UnitFilter = ({ filters, activeKey, onSelect, onCompare }) => {
-  const { state, set, toggle, reset, results, dirty, compare, toggleCompare, clearCompare, compareFull } =
-    filters
+const UnitFilter = ({ filters, onCompare, onEnquire }) => {
+  const { state, set, toggle, reset, results, dirty, compare, toggleCompare, clearCompare } = filters
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -120,103 +110,19 @@ const UnitFilter = ({ filters, activeKey, onSelect, onCompare }) => {
         )}
       </div>
 
-      {/* ---------- Results ---------- */}
-      <ul className="no-scrollbar flex max-h-[38vh] min-h-0 flex-col gap-1.5 overflow-y-auto pr-0.5 md:max-h-none md:flex-1">
-        {results.map((p) => {
-          const inCompare = compare.includes(p.key)
-          return (
-            <li key={p.key} className="flex items-stretch gap-1.5">
-              <label
-                onClick={(e) => e.stopPropagation()}
-                className="flex shrink-0 cursor-pointer items-center pl-0.5"
-                title={inCompare ? 'Remove from compare' : 'Add to compare'}
-              >
-                <input
-                  type="checkbox"
-                  checked={inCompare}
-                  onChange={() => toggleCompare(p.key)}
-                  disabled={!inCompare && compareFull}
-                  aria-label={`Compare ${p.name}`}
-                  className="h-3.5 w-3.5 accent-brass disabled:opacity-30"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => onSelect(p.key)}
-                aria-current={p.key === activeKey ? 'true' : undefined}
-                className={[
-                  'flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200',
-                  p.key === activeKey
-                    ? 'border-brass/60 bg-brass/8'
-                    : 'border-ink/10 hover:border-ink/25 hover:bg-ink/3',
-                ].join(' ')}
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span className="block h-11 w-11 shrink-0 overflow-hidden rounded-md border border-ink/10 bg-paper-2">
-                    <picture>
-                      <source type="image/webp" srcSet={`${p.base}-960.webp`} />
-                      <img
-                        src={`${p.base}-960.jpg`}
-                        alt=""
-                        aria-hidden="true"
-                        className="h-full w-full object-contain"
-                        loading="lazy"
-                        draggable={false}
-                      />
-                    </picture>
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[13px] text-ink">{p.name}</span>
-                    <span className="mt-1 block truncate text-[11px] text-ink-3">{describe(p)}</span>
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  {p.carpet ? (
-                    <>
-                      <span className="t-fig block text-[15px] leading-none text-brass-ink">
-                        {sqft(p.carpet.sqft)}
-                      </span>
-                      <span className="mt-1 block text-[9px] uppercase tracking-[0.16em] text-ink-3">
-                        sq.ft
-                      </span>
-                    </>
-                  ) : (
-                    <span className="t-label rounded-full border border-ink/15 px-2 py-1 text-ink-2">
-                      {p.config}
-                    </span>
-                  )}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-
-        {results.length === 0 && (
-          <li className="px-1 py-6 text-center text-[12px] text-ink-3">
-            No residences match these filters.{' '}
-            <button
-              type="button"
-              onClick={reset}
-              className="underline underline-offset-4 hover:text-ink"
-            >
-              Reset
-            </button>
-          </li>
-        )}
-      </ul>
+      {/* ---------- Enquire ---------- */}
+      <button
+        type="button"
+        onClick={() => onEnquire?.()}
+        className="mt-auto inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink"
+      >
+        Enquire about a residence
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
+          <path d="M4 12h15M13 6l6 6-6 6" />
+        </svg>
+      </button>
     </div>
   )
-}
-
-/** The row's second line: what the sheet states, in reading order. */
-const describe = (p) => {
-  if (!p.carpet) return p.band
-  const extras = p.features.filter((f) => FEATURE_LABELS[f] && f !== 'deck' && f !== 'utility')
-  return [
-    `${p.bedrooms} bed`,
-    `${sqft(p.total.sqft)} sq.ft total`,
-    ...extras.map((f) => FEATURE_LABELS[f]),
-  ].join(' · ')
 }
 
 const Facet = ({ label, children }) => (
