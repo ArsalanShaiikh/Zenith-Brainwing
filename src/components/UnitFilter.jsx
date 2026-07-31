@@ -1,44 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  AREA_BOUNDS,
-  FEATURE_FILTERS,
-  FEATURE_LABELS,
-  PLAN_TYPES,
-  SORT_OPTIONS,
-  sqft,
-} from '../lib/floorplans'
+import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sqft } from '../lib/floorplans'
 
 /**
  * Search by unit — the faceted half of the floorplan explorer, ported from the
  * `filtering-plans` prototype and re-cut in the Zenith palette.
  *
- * Deliberately text-only: the result rows carry the residence's name and its
- * stated figures, never a thumbnail. The sheet itself renders once, large, on
- * the right — a plan drawing at list size is unreadable anyway.
+ * Results themselves render as a card grid alongside this panel (see
+ * UnitGrid) — this column stays limited to facets, compare, and enquiry.
  */
-const UnitFilter = ({ filters, activeKey, onSelect }) => {
-  const { state, set, toggle, reset, results, dirty } = filters
+const UnitFilter = ({ filters, onCompare, onEnquire }) => {
+  const { state, set, toggle, reset, results, dirty, compare, toggleCompare, clearCompare } = filters
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-      <label className="relative block shrink-0">
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-ink-3 stroke-[1.6]"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
-        <input
-          type="text"
-          value={state.query}
-          onChange={(e) => set({ query: e.target.value })}
-          placeholder="Search residences…"
-          className="w-full rounded-full border border-ink/15 bg-paper-2/60 py-2.5 pl-9 pr-3 text-[12.5px] text-ink outline-none placeholder:text-ink-3 focus:border-brass/70"
-        />
-      </label>
-
       {/* ---------- Facets ---------- */}
       <div className="shrink-0 rounded-xl border border-ink/10 bg-ink/3 p-2.5 md:p-3">
         {/* Count and sort stack rather than sit inline — the column is too
@@ -85,71 +59,70 @@ const UnitFilter = ({ filters, activeKey, onSelect }) => {
         </button>
       </div>
 
-      {/* ---------- Results ---------- */}
-      <ul className="no-scrollbar flex max-h-[38vh] min-h-0 flex-col gap-1.5 overflow-y-auto pr-0.5 md:max-h-none md:flex-1">
-        {results.map((p) => (
-          <li key={p.key}>
+      {/* ---------- Compare ---------- */}
+      <div className="shrink-0 rounded-xl border border-brass/35 bg-brass/6 p-2.5 md:p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="t-label text-ink-2">
+            Compare <span className="text-brass-ink">({compare.length}/3)</span>
+          </p>
+          {compare.length > 0 && (
             <button
               type="button"
-              onClick={() => onSelect(p.key)}
-              aria-current={p.key === activeKey ? 'true' : undefined}
-              className={[
-                'flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200',
-                p.key === activeKey
-                  ? 'border-brass/60 bg-brass/8'
-                  : 'border-ink/10 hover:border-ink/25 hover:bg-ink/3',
-              ].join(' ')}
+              onClick={clearCompare}
+              className="text-[10px] text-ink-3 underline underline-offset-4 hover:text-ink"
             >
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] text-ink">{p.name}</span>
-                <span className="mt-1 block truncate text-[11px] text-ink-3">{describe(p)}</span>
-              </span>
-              <span className="shrink-0 text-right">
-                {p.carpet ? (
-                  <>
-                    <span className="t-fig block text-[15px] leading-none text-brass-ink">
-                      {sqft(p.carpet.sqft)}
-                    </span>
-                    <span className="mt-1 block text-[9px] uppercase tracking-[0.16em] text-ink-3">
-                      sq.ft
-                    </span>
-                  </>
-                ) : (
-                  <span className="t-label rounded-full border border-ink/15 px-2 py-1 text-ink-2">
-                    {p.config}
-                  </span>
-                )}
-              </span>
+              Clear
             </button>
-          </li>
-        ))}
+          )}
+        </div>
 
-        {results.length === 0 && (
-          <li className="px-1 py-6 text-center text-[12px] text-ink-3">
-            No residences match these filters.{' '}
+        {compare.length === 0 ? (
+          <p className="mt-1.5 text-[11px] text-ink-3">Select up to 3 residences to compare.</p>
+        ) : (
+          <>
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {compare.map((key) => {
+                const p = PLAN_BY_KEY[key]
+                if (!p) return null
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleCompare(key)}
+                      className="flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-2.5 py-1 text-[10.5px] text-ink-2 transition-colors duration-200 hover:border-ink/35 hover:text-ink"
+                    >
+                      <span className="max-w-24 truncate">{p.name}</span>
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
             <button
               type="button"
-              onClick={reset}
-              className="underline underline-offset-4 hover:text-ink"
+              onClick={onCompare}
+              disabled={compare.length < 2}
+              className="mt-2.5 w-full rounded-full bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink disabled:pointer-events-none disabled:opacity-35"
             >
-              Reset
+              Compare now
             </button>
-          </li>
+          </>
         )}
-      </ul>
+      </div>
+
+      {/* ---------- Enquire ---------- */}
+      <button
+        type="button"
+        onClick={() => onEnquire?.()}
+        className="mt-auto inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink"
+      >
+        Enquire about a residence
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
+          <path d="M4 12h15M13 6l6 6-6 6" />
+        </svg>
+      </button>
     </div>
   )
-}
-
-/** The row's second line: what the sheet states, in reading order. */
-const describe = (p) => {
-  if (!p.carpet) return p.band
-  const extras = p.features.filter((f) => FEATURE_LABELS[f] && f !== 'deck' && f !== 'utility')
-  return [
-    `${p.bedrooms} bed`,
-    `${sqft(p.total.sqft)} sq.ft total`,
-    ...extras.map((f) => FEATURE_LABELS[f]),
-  ].join(' · ')
 }
 
 const Facet = ({ label, children }) => (
