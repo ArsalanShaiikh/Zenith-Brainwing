@@ -497,6 +497,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
           plans={comparePlans}
           onClose={() => setCompareOpen(false)}
           onRemove={filters.toggleCompare}
+          onZoom={setZoomPlan}
         />
       )}
       <PlanZoom plan={zoomPlan} onClose={() => setZoomPlan(null)} />

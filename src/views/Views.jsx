@@ -89,15 +89,19 @@ const Views = ({ active }) => {
     })
   })
 
-  // Warm the other hour's cube preview at this height, so the toggle dissolves
-  // on the spot instead of stalling on a first fetch. One request, and the
-  // viewer reads it straight back out of cache.
+  // Warm every vantage's cube preview at both hours, so switching elevation
+  // or toggling day/evening dissolves on the spot instead of stalling on a
+  // first fetch — each is one small request, and the viewer reads it straight
+  // back out of cache when it actually switches there.
   useEffect(() => {
     if (!active) return
-    const other = VANTAGES[i].scenes[time === 'day' ? 'evening' : 'day']
-    const img = new Image()
-    img.src = other.previewUrl
-  }, [active, i, time])
+    VANTAGES.forEach((v) => {
+      TIMES.forEach((t) => {
+        const img = new Image()
+        img.src = v.scenes[t.id].previewUrl
+      })
+    })
+  }, [active])
 
   return (
     <div

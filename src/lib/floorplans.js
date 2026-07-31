@@ -247,14 +247,10 @@ export const filterPlans = ({ types, features, area, sortBy }) => {
   }
 }
 
-/** Bucket a plate's rank (0 = topmost) among `count` plates into one plan. */
-export const planForPlateRank = (rank, count) => {
-  const bucket = Math.min(
-    FLOOR_PLANS.length - 1,
-    Math.floor((rank / Math.max(count, 1)) * FLOOR_PLANS.length),
-  )
-  return FLOOR_PLANS[bucket]
-}
+/** Every plate on the visual elevation opens the same typical-floor reference
+ *  plan — the tower doesn't have unit-specific renders yet, so the click
+ *  target is rank-independent for now. */
+export const planForPlateRank = () => PLAN_BY_KEY.typical
 
 /**
  * Floor number for a plate, counted straight off the plates that are drawn on

@@ -167,12 +167,7 @@ const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
 
   return (
     <div className={className} {...rest}>
-      <div
-        className={[
-          'absolute inset-0 overflow-hidden transition-opacity duration-700 ease-out',
-          live ? 'opacity-100' : 'opacity-0',
-        ].join(' ')}
-      >
+      <div className="absolute inset-0 overflow-hidden bg-void">
         <div ref={hostRef} className="absolute inset-0" />
 
         {/* The same grade the still plates get in MediaLayer. Without it the
@@ -199,6 +194,18 @@ const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(11_10_8/0.6)_0%,rgb(11_10_8/0.16)_32%,rgb(11_10_8/0)_60%)]"
         />
       </div>
+
+      {/* Loading cover. Opaque until the pano has a frame worth showing, and
+          fades OUT rather than the pano fading in — the pano itself stays
+          permanently mounted above, so there is never a gap where the media
+          plate behind Views can bleed through. */}
+      <div
+        aria-hidden="true"
+        className={[
+          'pointer-events-none absolute inset-0 z-10 bg-void transition-opacity duration-700 ease-out',
+          live ? 'opacity-0' : 'opacity-100',
+        ].join(' ')}
+      />
     </div>
   )
 }
