@@ -99,8 +99,8 @@ const ROWS = [
  *  bedroom count of their own). */
 const badgeFor = (p) => (p.bedrooms ? `${p.bedrooms} BHK` : p.config)
 
-/** The 18%–82% vertical band kept from every 960×679 letterhead sheet. */
-const PLAN_PREVIEW_ASPECT = '960 / 435'
+/** Matches the 960×679 sheet's own aspect ratio, so the plan renders at full height uncropped. */
+const PLAN_PREVIEW_ASPECT = '960 / 680'
 
 /**
  * Side-by-side compare — the 2–3 residences picked from the unit list, read
@@ -181,22 +181,10 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                         >
                           <picture>
                             <source type="image/webp" srcSet={`${p.base}-960.webp`} />
-                            {/* Every sheet but the full floor plate shares one 960×679
-                                letterhead template (logo strip on top, RERA table / QR /
-                                disclaimer strip on bottom, plan in between) — cropping that
-                                fixed band out puts every plan at the same on-screen scale
-                                instead of "however much of the sheet its drawing happens to
-                                fill". The plate has no letterhead to crop, so it stays
-                                contained at its own size. */}
                             <img
                               src={`${p.base}-960.jpg`}
                               alt={`${p.name} floor plan`}
-                              className={
-                                p.key === 'plate'
-                                  ? 'h-full w-full object-contain p-1'
-                                  : 'absolute inset-x-0 top-0 h-auto w-full'
-                              }
-                              style={p.key === 'plate' ? undefined : { transform: 'translateY(-18%)' }}
+                              className="h-full w-full object-contain p-1"
                               loading="lazy"
                               draggable={false}
                             />
