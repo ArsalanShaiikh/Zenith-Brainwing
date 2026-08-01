@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { MENU_ITEMS } from '../lib/views'
+import DownloadSelection from './DownloadSelection'
 
 /** Per-row copy. Same figures as the old menu page — the sheet no longer swaps
  *  a background plate on hover, so these carry all the flavour now. */
@@ -71,18 +72,26 @@ const OrbitMenu = ({ show, onSelect }) => {
       data-orbit-menu
       className="pointer-events-none absolute inset-0 z-30 flex opacity-0"
     >
-      <div className="flex min-h-full w-full items-center p-3 sm:p-4 md:p-6 lg:p-8 3xl:p-12">
+      <div className="flex min-h-full w-full items-center p-3 sm:p-4 md:p-5 lg:p-6 3xl:p-9">
+        {/* Sized to hold six rows, a download action and the figure strip
+            without ever needing to scroll — the sixth row (Gallery) is what
+            pushed the old measures past the frame on short viewports. Width is
+            a vw clamp from lg up so the box keeps the same *share* of the frame
+            from 1024 to 3840 rather than a fixed slab. */}
         <div
           ref={sheetRef}
           className={[
             'glass pointer-events-auto w-full text-ink',
-            'max-w-[520px] px-5 py-4 sm:px-6 sm:py-5 md:max-w-[560px] md:px-7 md:py-6',
-            'lg:w-[clamp(360px,27vw,880px)] lg:max-w-none',
-            'lg:px-[clamp(24px,1.7vw,44px)] lg:py-[clamp(18px,1.35vw,36px)]',
-            'short:px-4 short:py-2.5',
+            'max-w-[400px] px-3.5 py-3 sm:max-w-[420px] sm:px-4 sm:py-3.5',
+            'md:max-w-[440px] md:px-4.5 md:py-4',
+            'lg:w-[clamp(320px,21vw,620px)] lg:max-w-none',
+            'lg:px-[clamp(16px,1.1vw,30px)] lg:py-[clamp(13px,0.9vw,24px)]',
+            'short:px-3 short:py-2',
           ].join(' ')}
         >
-          <ul className="py-1">
+          <DownloadSelection />
+
+          <ul className="py-0.5">
             {MENU_ITEMS.map((v, i) => (
               <li key={v.id}>
                 <button
@@ -91,10 +100,10 @@ const OrbitMenu = ({ show, onSelect }) => {
                   data-menu-row={v.id}
                   onClick={() => onSelect(v.id)}
                   className={[
-                    'group relative flex w-full items-center gap-3 overflow-hidden',
-                    'border-b border-ink/12 py-3 text-left last:border-b-0 md:gap-4 md:py-3.5',
-                    'lg:gap-[clamp(12px,1vw,26px)] lg:py-[clamp(12px,0.95vw,26px)]',
-                    'short:py-1.5',
+                    'group relative flex w-full items-center gap-2.5 overflow-hidden',
+                    'border-b border-ink/12 py-2 text-left last:border-b-0 md:gap-3 md:py-2.5',
+                    'lg:gap-[clamp(8px,0.65vw,17px)] lg:py-[clamp(7px,0.52vw,14px)]',
+                    'short:py-1',
                   ].join(' ')}
                 >
                   {/* Ink wash + brass rule sweeping in from the left edge —
@@ -108,13 +117,13 @@ const OrbitMenu = ({ show, onSelect }) => {
                     className="absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-brass transition-transform duration-500 ease-zenith group-hover:scale-x-100 group-focus-visible:scale-x-100"
                   />
 
-                  <span className="t-fig relative w-6 shrink-0 text-[10px] text-ink-3 transition-colors duration-300 group-hover:text-brass-ink lg:w-[clamp(24px,1.8vw,44px)] lg:text-[clamp(10px,0.62vw,15px)]">
+                  <span className="t-fig relative w-4.5 shrink-0 text-[9px] text-ink-3 transition-colors duration-300 group-hover:text-brass-ink lg:w-[clamp(16px,1.15vw,28px)] lg:text-[clamp(9px,0.45vw,12px)]">
                     {v.num}
                   </span>
 
                   <span className="relative min-w-0 flex-1">
                     {/* Two lines of type rolling inside a one-line mask. */}
-                    <span className="block h-[1.15em] overflow-hidden text-[19px] leading-[1.15] md:text-[22px] lg:text-[clamp(19px,1.5vw,42px)]">
+                    <span className="block h-[1.15em] overflow-hidden text-[15px] leading-[1.15] md:text-[16.5px] lg:text-[clamp(15px,1vw,29px)]">
                       <span className="block transition-transform duration-500 ease-zenith group-hover:-translate-y-1/2 group-focus-visible:-translate-y-1/2">
                         <span className="block font-light leading-[1.15] tracking-[-0.015em] text-ink-2">
                           {v.label}
@@ -124,19 +133,19 @@ const OrbitMenu = ({ show, onSelect }) => {
                         </span>
                       </span>
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-light text-ink-3 md:text-[12px] lg:text-[clamp(11px,0.72vw,17px)] short:hidden">
+                    <span className="mt-px block truncate text-[9.5px] font-light leading-[1.3] text-ink-3 md:text-[10px] lg:text-[clamp(9.5px,0.5vw,14px)] short:hidden">
                       {META[v.id].blurb}
                     </span>
                   </span>
 
-                  <span className="relative flex shrink-0 items-center gap-2.5">
-                    <span className="t-label hidden text-ink-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:block">
+                  <span className="relative flex shrink-0 items-center gap-2">
+                    <span className="hidden text-[8.5px] font-normal uppercase leading-none tracking-[0.14em] text-ink-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:block lg:text-[clamp(8.5px,0.42vw,11px)]">
                       {META[v.id].stat}
                     </span>
                     <svg
                       viewBox="0 0 24 24"
                       aria-hidden="true"
-                      className="h-4 w-4 shrink-0 fill-none stroke-current stroke-[1.4] text-ink-3 transition-[transform,color] duration-400 ease-zenith group-hover:translate-x-1 group-hover:text-brass-ink lg:h-[clamp(16px,1.1vw,26px)] lg:w-[clamp(16px,1.1vw,26px)]"
+                      className="h-3.5 w-3.5 shrink-0 fill-none stroke-current stroke-[1.4] text-ink-3 transition-[transform,color] duration-400 ease-zenith group-hover:translate-x-1 group-hover:text-brass-ink lg:h-[clamp(13px,0.85vw,19px)] lg:w-[clamp(13px,0.85vw,19px)]"
                     >
                       <path d="M4 12h15M13 6l6 6-6 6" />
                     </svg>
@@ -146,13 +155,13 @@ const OrbitMenu = ({ show, onSelect }) => {
             ))}
           </ul>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-ink/14 pt-3.5 sm:grid-cols-4 lg:pt-[clamp(14px,1vw,26px)] short:hidden">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-ink/14 pt-2.5 sm:grid-cols-4 lg:pt-[clamp(9px,0.65vw,17px)] short:hidden">
             {FACTS.map(([k, val]) => (
-              <div key={k} className="flex flex-col gap-0.5">
-                <span className="text-[9px] uppercase tracking-[0.14em] text-ink-3 lg:text-[clamp(9px,0.55vw,13px)]">
+              <div key={k} className="flex flex-col">
+                <span className="text-[8px] uppercase leading-none tracking-[0.14em] text-ink-3 lg:text-[clamp(8px,0.4vw,11px)]">
                   {k}
                 </span>
-                <span className="t-fig text-[14px] text-ink lg:text-[clamp(14px,0.95vw,22px)]">
+                <span className="t-fig mt-0.5 text-[11.5px] leading-none text-ink lg:text-[clamp(11.5px,0.7vw,17px)]">
                   {val}
                 </span>
               </div>

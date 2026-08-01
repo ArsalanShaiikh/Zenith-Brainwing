@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { ViewProvider } from './context/ViewContext'
+import { VisitorProvider } from './context/VisitorContext'
 import { VIEWS } from './lib/views'
 import Landing from './components/Landing'
 import Shell from './components/Shell'
+import EntryGate from './components/EntryGate'
 import Showcase from './views/Showcase'
 import Gallery from './views/Gallery'
 
@@ -44,10 +46,18 @@ const AppRoutes = () => {
   )
 }
 
+/**
+ * The gate renders alongside the routes rather than instead of them: the
+ * landing mounts and warms its hundred orbit frames while the visitor is still
+ * being introduced, so the tower is ready the moment the paper lifts.
+ */
 const App = () => (
-  <ViewProvider>
-    <AppRoutes />
-  </ViewProvider>
+  <VisitorProvider>
+    <ViewProvider>
+      <AppRoutes />
+      <EntryGate />
+    </ViewProvider>
+  </VisitorProvider>
 )
 
 export default App

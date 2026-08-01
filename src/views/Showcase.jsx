@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { showcaseFor } from '../lib/showcase'
+import { showcaseRecord } from '../lib/saveables'
+import { useVisitor } from '../hooks/useVisitor'
+import LikeButton from '../components/LikeButton'
 
 /**
  * A point's media, shown full-screen. There's no auto-pan any more: multi-media
@@ -12,6 +15,7 @@ import { showcaseFor } from '../lib/showcase'
 const Showcase = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { gateOpen } = useVisitor()
   const data = showcaseFor(id)
 
   const rootRef = useRef(null)
@@ -98,9 +102,10 @@ const Showcase = () => {
     setIdx((i) => (i + dir + n) % n)
   }
 
-  // Arrow keys drive the slides too.
+  // Arrow keys drive the slides too — unless the entry gate still has the
+  // screen, which a reload straight onto this route can leave it holding.
   useEffect(() => {
-    if (!animated) return undefined
+    if (!animated || gateOpen) return undefined
     const onKey = (e) => {
       if (e.key === 'ArrowRight') {
         dirRef.current = 1
@@ -112,7 +117,7 @@ const Showcase = () => {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [animated, n])
+  }, [animated, n, gateOpen])
 
   if (!data) return null
 
@@ -180,6 +185,19 @@ const Showcase = () => {
           <path d="M15 5 8 12l7 7" />
         </svg>
       </button>
+
+      {/* Mark this space. Keyed to the point, not the slide: a point's two
+          media are the same space shot twice, and a sheet that printed both
+          would read as a duplicate. */}
+      <LikeButton
+        record={showcaseRecord(data)}
+        label={data.title}
+        className={[
+          'absolute right-2 top-2 z-20',
+          'sm:right-2.5 sm:top-2.5 md:right-5 md:top-5',
+          'lg:right-3 lg:top-3 3xl:right-4 3xl:top-4',
+        ].join(' ')}
+      />
 
       {/* Prev / next — only for multi-media points; they loop. */}
       {animated && (

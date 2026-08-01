@@ -10,7 +10,9 @@ import {
   sqft,
 } from '../lib/floorplans'
 import { useUnitFilters } from '../hooks/useUnitFilters'
+import { planRecord } from '../lib/saveables'
 import UnitFilter from './UnitFilter'
+import LikeButton from './LikeButton'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
 
@@ -425,8 +427,11 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
           </span>
         </div>
 
-        {/* The plan sheet — a document, so it fits whole and never crops. */}
-        <figure className="card m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
+        {/* The plan sheet — a document, so it fits whole and never crops. The
+            mark sits inside the sheet's own frame rather than out in the
+            column, so it reads as belonging to this drawing. Flat paper tone:
+            frosted glass has no dark backdrop to lift off here. */}
+        <figure className="card relative m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
           <picture key={plan.key} className="block h-full min-h-0 w-full">
             <source type="image/webp" srcSet={`${plan.base}-1600.webp`} />
             <img
@@ -436,6 +441,13 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
               draggable={false}
             />
           </picture>
+          <LikeButton
+            record={planRecord(plan)}
+            label={plan.name}
+            size="sm"
+            tone="paper"
+            className="absolute right-2 top-2 z-10 md:right-3 md:top-3 3xl:right-4 3xl:top-4"
+          />
         </figure>
 
         {/* Specs + CTA. */}

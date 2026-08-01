@@ -11,6 +11,7 @@ import {
   wrapFrame,
 } from '../lib/orbit'
 import { floorFromRank } from '../lib/floorplans'
+import { useVisitor } from '../hooks/useVisitor'
 import Logo from './Logo'
 import OrbitMenu from './OrbitMenu'
 import FloorExplorer from './FloorExplorer'
@@ -254,6 +255,7 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
 const Landing = ({ onView, onPoint }) => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { gateOpen } = useVisitor()
   const rootRef = useRef(null)
   const canvasRef = useRef(null)
   const loaderRef = useRef(null)
@@ -467,6 +469,16 @@ const Landing = ({ onView, onPoint }) => {
       const loader = loaderRef.current
       const canvas = canvasRef.current
 
+      // The entry gate is holding its own sheet of paper over this screen and
+      // owns the wipe. Clear our loader without playing it — two paper layers
+      // wiping in sequence would read as a stutter — and hold the tower dark
+      // until the gate hands over, which re-runs this effect.
+      if (gateOpen) {
+        gsap.set(loader, { autoAlpha: 0 })
+        gsap.set(canvas, { autoAlpha: 0, scale: 1.06, transformOrigin: '50% 50%' })
+        return
+      }
+
       if (prefersReducedMotion()) {
         gsap.set(loader, { autoAlpha: 0 })
         gsap.set(canvas, { autoAlpha: 1 })
@@ -488,7 +500,7 @@ const Landing = ({ onView, onPoint }) => {
         )
         .set(loader, { autoAlpha: 0 })
     },
-    { dependencies: [ready], scope: rootRef },
+    { dependencies: [ready, gateOpen], scope: rootRef },
   )
 
   // --- Play the turn to a rest position at a fixed 24fps. ---------------
@@ -560,7 +572,7 @@ const Landing = ({ onView, onPoint }) => {
 
   // --- Keyboard: step between rest positions. ---------------------------
   useEffect(() => {
-    if (!ready || exiting) return undefined
+    if (!ready || exiting || gateOpen) return undefined
     const onKey = (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
       e.preventDefault()
@@ -569,7 +581,7 @@ const Landing = ({ onView, onPoint }) => {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ready, exiting, advance])
+  }, [ready, exiting, gateOpen, advance])
 
   // --- Menu / mode logic. -----------------------------------------------
   // The menu shows only on the opening frame with no mode engaged. The corner
@@ -882,23 +894,30 @@ const Landing = ({ onView, onPoint }) => {
       <OrbitMenu show={menuVisible} onSelect={onMenuSelect} />
 
       {/* Corner chrome — logo, title, drag hint. Shown on the non-opening
-          frames (mode `none`), where the menu isn't. */}
-      <div
-        ref={chromeRef}
-        className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-4 opacity-0 sm:p-5 md:p-8 lg:p-10 3xl:p-14"
-      >
-        <div className="flex items-start justify-between">
-          <Logo
-            width={180}
-            className="pointer-events-auto w-24 sm:w-28 md:w-32 3xl:w-40 drop-shadow-[0_2px_18px_rgb(0_0_0/0.55)]"
-          />
-        </div>
+          frames (mode `none`), where the menu isn't.
+          Each piece is placed on the frame itself rather than sharing one
+          padded column: the mark wants to sit tighter into its corner than the
+          hero title does off the bottom edge, and a single padding could only
+          give them the same inset. */}
+      <div ref={chromeRef} className="pointer-events-none absolute inset-0 z-10 opacity-0">
+        {/* The mark, tucked into the corner where a masthead sits — roughly
+            half the frame padding, so it reads as placed rather than floated. */}
+        <Logo
+          width={180}
+          className={[
+            'pointer-events-auto absolute w-24 drop-shadow-[0_2px_18px_rgb(0_0_0/0.55)]',
+            'left-2.5 top-2.5 sm:left-3 sm:top-3 sm:w-28',
+            'md:left-4.5 md:top-4.5 md:w-32 lg:left-5.5 lg:top-5.5',
+            '3xl:left-7.5 3xl:top-7.5 3xl:w-40',
+          ].join(' ')}
+        />
 
         <div
           ref={hintRef}
           aria-hidden="true"
           className={[
-            'pointer-events-none mx-auto flex items-center gap-3 rounded-full px-4 py-2',
+            'pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2',
+            'items-center gap-3 rounded-full px-4 py-2',
             'glass-surface text-ink shadow-[0_14px_40px_-18px_rgb(0_0_0/0.7)]',
             'transition-opacity duration-500',
             hinting ? 'opacity-100' : 'opacity-0',
@@ -912,7 +931,13 @@ const Landing = ({ onView, onPoint }) => {
           </span>
         </div>
 
-        <div className="[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]">
+        <div
+          className={[
+            'absolute bottom-4 left-4 sm:bottom-5 sm:left-5 md:bottom-8 md:left-8',
+            'lg:bottom-10 lg:left-10 3xl:bottom-14 3xl:left-14',
+            '[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]',
+          ].join(' ')}
+        >
           <p className="t-label flex items-center gap-2 text-paper/75 before:h-px before:w-3.5 before:bg-brass before:content-['']">
             Runwal &middot; Balkum, Thane (W)
           </p>
@@ -1025,16 +1050,26 @@ const Landing = ({ onView, onPoint }) => {
           </div>
         </div>
 
+        {/* The readout belongs to whichever paper the visitor is actually
+            looking at. While the gate is up it owns the screen and carries its
+            own hairline, so ours stays out of the way — if the pool is still
+            cold when the gate hands over, this reappears and finishes the job. */}
         <p
           ref={counterRef}
-          className="t-fig absolute bottom-6 right-6 text-[11px] tracking-[0.12em] text-ink-3 md:bottom-9 md:right-10 md:text-[12px]"
+          className={[
+            't-fig absolute bottom-6 right-6 text-[11px] tracking-[0.12em] text-ink-3',
+            'transition-opacity duration-300 md:bottom-9 md:right-10 md:text-[12px]',
+            gateOpen ? 'opacity-0' : 'opacity-100',
+          ].join(' ')}
         >
           000
         </p>
         <span
           ref={ruleRef}
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-brass"
+          className={`absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-brass ${
+            gateOpen ? 'opacity-0' : 'opacity-100'
+          }`}
         />
         <span className="sr" role="status" aria-live="polite">
           {ready ? 'Ready. Drag the tower to rotate, or use the menu.' : `Loading ${progress} percent`}

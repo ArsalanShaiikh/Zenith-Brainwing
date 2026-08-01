@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 import { srcSet, fallbackSrc } from '../lib/images'
+import { amenityRecord } from '../lib/saveables'
+import LikeButton from '../components/LikeButton'
 
 /** `short` marks the three tiles that survive the short-viewport cut. */
 const TILES = [
@@ -202,16 +204,21 @@ const Amenities = ({ active }) => {
                   <path d="M9 4l8 8-8 8" />
                 </svg>
               </button>
-              <button
-                type="button"
-                onClick={() => setOpen(null)}
-                aria-label="Close viewer"
-                className={`${iconBtn} absolute right-3 top-3 z-2 h-10 w-10 md:right-6 md:top-6 md:h-11 md:w-11`}
-              >
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.4]">
-                  <path d="M5 5l14 14M19 5L5 19" />
-                </svg>
-              </button>
+              {/* Top-right cluster: mark it, or close it. Grouped in one row
+                  so the two never have to know each other's width. */}
+              <div className="absolute right-3 top-3 z-2 flex items-center gap-2 md:right-6 md:top-6 md:gap-2.5">
+                <LikeButton record={amenityRecord(cur)} label={cur.name} />
+                <button
+                  type="button"
+                  onClick={() => setOpen(null)}
+                  aria-label="Close viewer"
+                  className={`${iconBtn} h-10 w-10 md:h-11 md:w-11 3xl:h-12 3xl:w-12 4xl:h-14 4xl:w-14`}
+                >
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.4] md:h-4 md:w-4">
+                    <path d="M5 5l14 14M19 5L5 19" />
+                  </svg>
+                </button>
+              </div>
 
               <div className="glass-surface absolute bottom-3 left-3 z-2 flex flex-col gap-0.5 rounded-plate px-3.5 py-2.5 md:bottom-6 md:left-6 md:px-4 md:py-3">
                 <span className="text-[15px] font-normal leading-tight md:text-[17px]">
