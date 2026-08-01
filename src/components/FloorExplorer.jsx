@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import {
-  FEATURE_LABELS,
-  FLOOR_PLANS,
   FLOOR_SIDES,
+  PLAN_BY_KEY,
   floorFromRank,
   planForPlateRank,
   sideIndexForFrame,
-  sqft,
 } from '../lib/floorplans'
 import { useUnitFilters } from '../hooks/useUnitFilters'
 import { planRecord } from '../lib/saveables'
 import UnitFilter from './UnitFilter'
+import UnitGrid from './UnitGrid'
+import PlanZoom from './PlanZoom'
+import UnitCompare from './UnitCompare'
 import LikeButton from './LikeButton'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
@@ -80,8 +81,10 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
   const userFlipRef = useRef(false)
 
   const [mode, setMode] = useState('visual') // 'visual' | 'search'
-  const [searchKey, setSearchKey] = useState(FLOOR_PLANS[0].key)
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [zoomPlan, setZoomPlan] = useState(null)
   const filters = useUnitFilters()
+  const comparePlans = filters.compare.map((k) => PLAN_BY_KEY[k]).filter(Boolean)
   // The floor tag: {rank, y} for the plate under the cursor (px from the box
   // top); `out` keeps it mounted while it fades away after the cursor leaves.
   const [hoverInfo, setHoverInfo] = useState(null)
@@ -102,15 +105,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
   const plateCount = shapes.length
   const rank = Math.min(selectedRank, plateCount - 1)
   const activeRank = hoverInfo ? hoverInfo.rank : rank
-  // The open residence, derived rather than synced: narrowing the filters past
-  // the selection falls through to the first surviving result, and clearing
-  // the list entirely leaves the last-picked plan on screen.
-  const searchPlan =
-    filters.results.find((p) => p.key === searchKey) ??
-    filters.results[0] ??
-    FLOOR_PLANS.find((p) => p.key === searchKey) ??
-    FLOOR_PLANS[0]
-  const plan = mode === 'search' ? searchPlan : planForPlateRank(rank, plateCount)
+  const plan = planForPlateRank(rank, plateCount)
   const floorNumber = floorFromRank(rank, plateCount)
   const readoutFloor = floorFromRank(activeRank, plateCount)
   const tagY = hoverInfo ? hoverInfo.y : 0
@@ -206,29 +201,13 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
     if (rankMap) setSelectedRank(rankMap[i])
   }
 
-  // In search mode the readout is what the sheet states — carpet, balcony,
-  // total. Visual selection keeps the floor it was picked from up front.
-  const SPECS =
-    mode === 'search'
-      ? plan.carpet
-        ? [
-            ['Configuration', plan.config],
-            ['RERA carpet', `${sqft(plan.carpet.sqft)} sq.ft · ${plan.carpet.sqm} sq.m`],
-            ['Balcony', `${sqft(plan.balcony.sqft)} sq.ft`],
-            ['Total', `${sqft(plan.total.sqft)} sq.ft · ${plan.total.sqm} sq.m`],
-          ]
-        : [
-            ['Configuration', plan.config],
-            ['Covers', plan.band],
-            ['Elevation', side.label],
-          ]
-      : [
-          ['Floor', `No. ${floorNumber}`],
-          ['Configuration', plan.config],
-          ['Elevation', side.label],
-        ]
-
-  const amenities = mode === 'search' ? plan.features.map((f) => FEATURE_LABELS[f]) : []
+  // Visual selection keeps the floor it was picked from up front; search
+  // mode's per-plan detail now lives in the zoom viewer instead of here.
+  const SPECS = [
+    ['Floor', `No. ${floorNumber}`],
+    ['Configuration', plan.config],
+    ['Elevation', side.label],
+  ]
 
   return (
     <div
@@ -403,7 +382,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
               </p>
             </>
           ) : (
-            <UnitFilter filters={filters} activeKey={searchPlan.key} onSelect={setSearchKey} />
+            <UnitFilter filters={filters} onCompare={() => setCompareOpen(true)} onEnquire={onEnquire} />
           )}
         </div>
       </section>
@@ -411,76 +390,96 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
       {/* ---------- Right: the selected plan ---------- */}
       <section
         ref={rightRef}
-        className="relative flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6 md:h-full md:gap-4 md:p-8 lg:p-10 3xl:p-14"
+        className="relative flex flex-col gap-3 p-4 sm:p-6 md:h-full md:min-h-0 md:flex-1 md:gap-4 md:p-8 lg:p-10 3xl:p-14"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="t-label flex items-center gap-2 text-ink-3 before:h-px before:w-3.5 before:bg-brass before:content-['']">
-              {mode === 'visual' ? `Floor plan · Level ${floorNumber}` : plan.sheet}
+              {mode === 'visual'
+                ? `Floor plan · Level ${floorNumber}`
+                : 'Search by unit'}
             </p>
             <h2 className="mt-1.5 font-fine text-[clamp(24px,3vw,44px)] leading-[1.02] tracking-[-0.02em] text-ink">
-              {plan.name}
+              {mode === 'visual'
+                ? plan.name
+                : `${filters.results.length} ${filters.results.length === 1 ? 'residence' : 'residences'}`}
             </h2>
           </div>
-          <span className="t-label shrink-0 rounded-full border border-ink/15 px-3 py-1.5 text-ink-2">
-            {plan.config}
-          </span>
-        </div>
-
-        {/* The plan sheet — a document, so it fits whole and never crops. The
-            mark sits inside the sheet's own frame rather than out in the
-            column, so it reads as belonging to this drawing. Flat paper tone:
-            frosted glass has no dark backdrop to lift off here. */}
-        <figure className="card relative m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
-          <picture key={plan.key} className="block h-full min-h-0 w-full">
-            <source type="image/webp" srcSet={`${plan.base}-1600.webp`} />
-            <img
-              src={`${plan.base}-1600.jpg`}
-              alt={`${plan.name} floor plan`}
-              className="h-full w-full object-contain"
-              draggable={false}
-            />
-          </picture>
-          <LikeButton
-            record={planRecord(plan)}
-            label={plan.name}
-            size="sm"
-            tone="paper"
-            className="absolute right-2 top-2 z-10 md:right-3 md:top-3 3xl:right-4 3xl:top-4"
-          />
-        </figure>
-
-        {/* Specs + CTA. */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            <dl
-              className={[
-                'grid gap-x-5 gap-y-1',
-                SPECS.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3',
-              ].join(' ')}
-            >
-              {SPECS.map(([k, v]) => (
-                <div key={k} className="flex flex-col gap-0.5">
-                  <dt className="t-label text-ink-3">{k}</dt>
-                  <dd className="m-0 text-[12px] font-normal text-ink md:text-[13px]">{v}</dd>
-                </div>
-              ))}
-            </dl>
-            {amenities.length > 0 && (
-              <p className="m-0 text-[11px] text-ink-3 md:text-[12px]">{amenities.join(' · ')}</p>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {mode === 'search' ? (
+              <button
+                type="button"
+                onClick={() => filters.compare.length > 0 && setCompareOpen(true)}
+                disabled={filters.compare.length === 0}
+                className="t-label rounded-full bg-brass px-3 py-1.5 text-void transition-colors duration-200 hover:bg-brass-lift disabled:pointer-events-none disabled:opacity-35"
+              >
+                Compare {filters.compare.length}/3
+              </button>
+            ) : (
+              <span className="t-label rounded-full border border-ink/15 px-3 py-1.5 text-ink-2">
+                {plan.config}
+              </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => onEnquire?.()}
-            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink md:self-auto md:text-[11px]"
-          >
-            Enquire about this residence
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
-              <path d="M4 12h15M13 6l6 6-6 6" />
-            </svg>
-          </button>
         </div>
+
+        {mode === 'visual' ? (
+          <>
+            {/* The plan sheet — a document, so it fits whole and never crops.
+                The mark sits inside the sheet's own frame rather than out in
+                the column, so it reads as belonging to this drawing. Flat paper
+                tone: frosted glass has no dark backdrop to lift off here. */}
+            <figure className="card relative m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
+              <picture key={plan.key} className="block h-full min-h-0 w-full">
+                <source type="image/webp" srcSet={`${plan.base}-1600.webp`} />
+                <img
+                  src={`${plan.base}-1600.jpg`}
+                  alt={`${plan.name} floor plan`}
+                  className="h-full w-full object-contain"
+                  draggable={false}
+                />
+              </picture>
+              <LikeButton
+                record={planRecord(plan)}
+                label={plan.name}
+                size="sm"
+                tone="paper"
+                className="absolute right-2 top-2 z-10 md:right-3 md:top-3 3xl:right-4 3xl:top-4"
+              />
+            </figure>
+
+            {/* Specs + CTA. */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <dl className="grid grid-cols-3 gap-x-5 gap-y-1">
+                {SPECS.map(([k, v]) => (
+                  <div key={k} className="flex flex-col gap-0.5">
+                    <dt className="t-label text-ink-3">{k}</dt>
+                    <dd className="m-0 text-[12px] font-normal text-ink md:text-[13px]">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <button
+                type="button"
+                onClick={() => onEnquire?.()}
+                className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink md:self-auto md:text-[11px]"
+              >
+                Enquire about this residence
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
+                  <path d="M4 12h15M13 6l6 6-6 6" />
+                </svg>
+              </button>
+            </div>
+          </>
+        ) : (
+          <UnitGrid
+            results={filters.results}
+            compare={filters.compare}
+            toggleCompare={filters.toggleCompare}
+            compareFull={filters.compareFull}
+            onZoom={setZoomPlan}
+            onReset={filters.reset}
+          />
+        )}
       </section>
 
       {/* Back to the orbit. */}
@@ -503,6 +502,16 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
           <path d="M15 5 8 12l7 7" />
         </svg>
       </button>
+
+      {mode === 'search' && (
+        <UnitCompare
+          open={compareOpen}
+          plans={comparePlans}
+          onClose={() => setCompareOpen(false)}
+          onRemove={filters.toggleCompare}
+        />
+      )}
+      <PlanZoom plan={zoomPlan} onClose={() => setZoomPlan(null)} />
     </div>
   )
 }

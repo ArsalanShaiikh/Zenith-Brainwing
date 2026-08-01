@@ -190,6 +190,11 @@ export const FLOOR_PLANS = [
   },
 ]
 
+/** Fast lookup for a plan by key — used wherever a plan must be resolved
+ *  outside the filtered result list (e.g. compare selections that have since
+ *  scrolled out of the active facets). */
+export const PLAN_BY_KEY = Object.fromEntries(FLOOR_PLANS.map((p) => [p.key, p]))
+
 /** Carpet-area extent across the plans that state one, rounded outward to a
  *  round number so the slider ends land somewhere legible. */
 export const AREA_BOUNDS = (() => {
@@ -212,26 +217,16 @@ export const SORT_OPTIONS = [
  *  decimals, which is more precision than a list row needs. */
 export const sqft = (n) => Math.round(n).toLocaleString('en-US')
 
-/** Everything a plan is searched against, lower-cased once per plan. */
-const haystack = (p) =>
-  [p.name, p.sheet, p.config, p.band, ...(p.features ?? []).map((f) => FEATURE_LABELS[f])]
-    .join(' ')
-    .toLowerCase()
-
-const HAYSTACKS = Object.fromEntries(FLOOR_PLANS.map((p) => [p.key, haystack(p)]))
-
 /**
  * Apply the search-by-unit facets. `types` and `features` are Sets — empty
  * means "no constraint", the same convention the filter chips read from.
  * Reference plans state no carpet area, so they drop out as soon as the area
  * range is narrowed off its full extent.
  */
-export const filterPlans = ({ query, types, features, area, sortBy }) => {
-  const q = query.trim().toLowerCase()
+export const filterPlans = ({ types, features, area, sortBy }) => {
   const narrowed = area[0] > AREA_BOUNDS.min || area[1] < AREA_BOUNDS.max
 
   const out = FLOOR_PLANS.filter((p) => {
-    if (q && !HAYSTACKS[p.key].includes(q)) return false
     if (types.size && !types.has(p.type)) return false
     if (features.size && ![...features].every((f) => p.features.includes(f))) return false
     if (p.carpet) {
@@ -252,14 +247,10 @@ export const filterPlans = ({ query, types, features, area, sortBy }) => {
   }
 }
 
-/** Bucket a plate's rank (0 = topmost) among `count` plates into one plan. */
-export const planForPlateRank = (rank, count) => {
-  const bucket = Math.min(
-    FLOOR_PLANS.length - 1,
-    Math.floor((rank / Math.max(count, 1)) * FLOOR_PLANS.length),
-  )
-  return FLOOR_PLANS[bucket]
-}
+/** Every plate on the visual elevation opens the same typical-floor reference
+ *  plan — the tower doesn't have unit-specific renders yet, so the click
+ *  target is rank-independent for now. */
+export const planForPlateRank = () => PLAN_BY_KEY.typical
 
 /**
  * Floor number for a plate, counted straight off the plates that are drawn on
