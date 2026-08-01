@@ -313,7 +313,7 @@
    fill-opacity through inline styles (GSAP). */
 .floor-overlay .cls-1:hover {
   fill: #fff0ad !important;
-  fill-opacity: 0.98 !important;
+  fill-opacity: 0.6 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .floor-overlay .cls-1 {
