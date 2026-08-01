@@ -116,9 +116,11 @@ const Views = ({ active }) => {
     >
       {/* Full bleed: absolute against the panel resolves to the plate, padding
           and all, so the pano fills the screen while the chrome below stays
-          inside the shell's reserve. */}
+          inside the shell's reserve. Not marked data-reveal-figure: Pano owns
+          its own reveal (an opaque cover that fades once a frame is ready),
+          and clipping it out here as well would expose the media layer's
+          still photo behind it for the gap in between. */}
       <Pano
-        data-reveal-figure
         scene={scene}
         active={active}
         autorotate={spin}
