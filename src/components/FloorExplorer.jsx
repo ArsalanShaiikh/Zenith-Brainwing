@@ -3,6 +3,8 @@ import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import {
   FLOOR_SIDES,
   PLAN_BY_KEY,
+  TYPICAL_PLAN_VIEWBOX,
+  TYPICAL_PLAN_ZONES,
   floorFromRank,
   planForPlateRank,
   sideIndexForFrame,
@@ -77,10 +79,16 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
   const plateElsRef = useRef([])
   const flipDirRef = useRef(1)
   const userFlipRef = useRef(false)
+  const planWrapRef = useRef(null)
+  const planImgRef = useRef(null)
 
   const [mode, setMode] = useState('visual') // 'visual' | 'search'
   const [compareOpen, setCompareOpen] = useState(false)
   const [zoomPlan, setZoomPlan] = useState(null)
+  // A residence picked off the typical-plan overlay — overrides the
+  // rank-based plan until the floor/elevation selection changes again.
+  const [unitKey, setUnitKey] = useState(null)
+  const [planBox, setPlanBox] = useState(null)
   const filters = useUnitFilters()
   const comparePlans = filters.compare.map((k) => PLAN_BY_KEY[k]).filter(Boolean)
   // The floor tag: {rank, y} for the plate under the cursor (px from the box
@@ -103,7 +111,8 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
   const plateCount = shapes.length
   const rank = Math.min(selectedRank, plateCount - 1)
   const activeRank = hoverInfo ? hoverInfo.rank : rank
-  const plan = planForPlateRank(rank, plateCount)
+  const basePlan = planForPlateRank(rank, plateCount)
+  const plan = unitKey ? (PLAN_BY_KEY[unitKey] ?? basePlan) : basePlan
   const floorNumber = floorFromRank(rank, plateCount)
   const readoutFloor = floorFromRank(activeRank, plateCount)
   const tagY = hoverInfo ? hoverInfo.y : 0
@@ -136,6 +145,42 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
     setHoverInfo(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sideIdx, mode])
+
+  // Picking a different floor or elevation returns the panel to the typical
+  // plan rather than leaving a stale residence pinned from a prior floor.
+  useEffect(() => {
+    setUnitKey(null)
+  }, [rank, sideIdx])
+
+  // The plan sheet renders under object-contain, so it's letterboxed inside
+  // its frame; the overlay must sit over the rendered picture itself, not the
+  // wider card, so its box is measured the same way PlanZoom measures its
+  // sheet — from the image's own intrinsic ratio against its wrapper.
+  useEffect(() => {
+    if (plan.key !== 'typical') {
+      setPlanBox(null)
+      return
+    }
+    const img = planImgRef.current
+    const wrap = planWrapRef.current
+    if (!img || !wrap) return
+    const measure = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return
+      const rect = wrap.getBoundingClientRect()
+      const fit = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight)
+      const w = img.naturalWidth * fit
+      const h = img.naturalHeight * fit
+      setPlanBox({ width: w, height: h, left: (rect.width - w) / 2, top: (rect.height - h) / 2 })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(wrap)
+    img.addEventListener('load', measure)
+    return () => {
+      ro.disconnect()
+      img.removeEventListener('load', measure)
+    }
+  }, [plan.key])
 
   // Reveal / dismiss: the panel slides in from centre to its left dock while
   // the plan panel rises in beside it.
@@ -376,7 +421,9 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
               </div>
 
               <p className="t-label shrink-0 text-center text-ink-3">
-                Hover a floor, click to open
+                {plan.key === 'typical'
+                  ? 'Hover a floor, click to open — then click a residence on the plan'
+                  : 'Hover a floor, click to open'}
               </p>
             </>
           ) : (
@@ -423,17 +470,63 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
 
         {mode === 'visual' ? (
           <>
-            {/* The plan sheet — a document, so it fits whole and never crops. */}
-            <figure className="card m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
-              <picture key={plan.key} className="block h-full min-h-0 w-full">
-                <source type="image/webp" srcSet={`${plan.base}-1600.webp`} />
-                <img
-                  src={`${plan.base}-1600.jpg`}
-                  alt={`${plan.name} floor plan`}
-                  className="h-full w-full object-contain"
-                  draggable={false}
-                />
-              </picture>
+            {/* The plan sheet — a document, so it fits whole and never crops.
+                On the typical plan, six clickable outlines sit over the
+                picture's own rendered box, one per residence. */}
+            <figure className="card relative m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
+              {unitKey && (
+                <button
+                  type="button"
+                  onClick={() => setUnitKey(null)}
+                  className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper/95 px-3 py-1.5 text-[9px] uppercase tracking-[0.14em] text-ink-2 shadow-[0_10px_24px_-14px_rgb(0_0_0/0.5)] transition-colors duration-200 [backdrop-filter:blur(6px)] hover:text-ink"
+                >
+                  <svg viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
+                    <path d="M15 5 8 12l7 7" />
+                  </svg>
+                  Typical floor plan
+                </button>
+              )}
+              <div ref={planWrapRef} className="relative h-full min-h-0 w-full">
+                <picture key={plan.key} className="block h-full min-h-0 w-full">
+                  <source type="image/webp" srcSet={`${plan.base}-1600.webp`} />
+                  <img
+                    ref={planImgRef}
+                    src={`${plan.base}-1600.jpg`}
+                    alt={`${plan.name} floor plan`}
+                    className="h-full w-full object-contain"
+                    draggable={false}
+                  />
+                </picture>
+
+                {plan.key === 'typical' && planBox && (
+                  <div
+                    className="floor-overlay absolute"
+                    style={{ left: planBox.left, top: planBox.top, width: planBox.width, height: planBox.height }}
+                  >
+                    <svg viewBox={TYPICAL_PLAN_VIEWBOX} preserveAspectRatio="none" className="h-full w-full">
+                      {TYPICAL_PLAN_ZONES.map((zone) => {
+                        const label = PLAN_BY_KEY[zone.key]?.name ?? zone.key
+                        const shapeProps = {
+                          key: zone.key,
+                          className: 'cls-1',
+                          role: 'button',
+                          tabIndex: 0,
+                          'aria-label': `Open ${label}`,
+                          onClick: () => setUnitKey(zone.key),
+                          onKeyDown: (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') setUnitKey(zone.key)
+                          },
+                        }
+                        return zone.tag === 'polygon' ? (
+                          <polygon points={zone.points} {...shapeProps} />
+                        ) : (
+                          <path d={zone.d} {...shapeProps} />
+                        )
+                      })}
+                    </svg>
+                  </div>
+                )}
+              </div>
             </figure>
 
             {/* Specs + CTA. */}

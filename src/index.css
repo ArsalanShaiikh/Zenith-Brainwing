@@ -298,7 +298,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  filter: drop-shadow(0 0 10px rgb(217 193 88 / 0.25));
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.25));
 }
 /* Alpha lives per-plate (not a group opacity) so a hovered plate can lift well
    above the resting tint instead of being capped by it. */
@@ -306,7 +306,7 @@
   pointer-events: auto;
   cursor: pointer;
   fill: currentColor;
-  fill-opacity: 0.32;
+  fill-opacity: 0.16;
   transition: fill 0.2s ease, fill-opacity 0.2s ease;
 }
 /* !important so a hover always reads over the ambient cascade, which drives
