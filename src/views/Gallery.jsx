@@ -136,9 +136,18 @@ const Gallery = ({ onBack }) => {
     { dependencies: [idx], scope: rootRef },
   )
 
-  // Keep the active thumbnail in view on the rail.
+  // Keep the active thumbnail centred on the rail. Scrolls the rail itself
+  // rather than calling scrollIntoView on the thumb: that scrolls *every*
+  // scrollable ancestor, and this view's root counts as one, so picking a
+  // thumbnail off-screen dragged the whole gallery sideways.
   useEffect(() => {
-    thumbRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    const rail = railRef.current
+    const thumb = thumbRefs.current[idx]
+    if (!rail || !thumb) return
+    rail.scrollTo({
+      left: thumb.offsetLeft - (rail.clientWidth - thumb.offsetWidth) / 2,
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
   }, [idx])
 
   return (
@@ -151,7 +160,7 @@ const Gallery = ({ onBack }) => {
           <div
             key={g.base}
             ref={(el) => (slideRefs.current[i] = el)}
-            className="absolute inset-0 h-full w-full will-change-transform"
+            className="absolute inset-0 h-full w-full overflow-hidden will-change-transform"
             style={{ opacity: 0, visibility: 'hidden' }}
           >
             {warm && (

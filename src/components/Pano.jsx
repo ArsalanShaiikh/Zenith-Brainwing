@@ -136,16 +136,17 @@ const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
     if (!active) viewer.renderLoop().stop()
   }, [generation, active, autorotate])
 
-  // Hold the pano back until it has a frame worth showing. The still plate in
-  // the media layer is already behind it, so this is a hand-off, not a spinner.
+  // Hold the pano back only until it has drawn something. The opaque plate
+  // below stands in until then, so an early frame costs nothing: a transparent
+  // canvas reads as that plate, and the cube preview fills in within a frame or
+  // two. Waiting for a *stable* frame instead would hold the panel dark for the
+  // whole sharpening pass, which is the wait this hand-off exists to avoid.
   useEffect(() => {
     if (!generation || live) return
     const stage = viewerRef.current?.stage()
     if (!stage) return
 
-    const onFrame = (stable) => {
-      if (stable) setLive(true)
-    }
+    const onFrame = () => setLive(true)
     stage.addEventListener('renderComplete', onFrame)
     const t = setTimeout(() => setLive(true), REVEAL_FALLBACK_MS)
 
@@ -167,6 +168,13 @@ const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
 
   return (
     <div className={className} {...rest}>
+      {/* The plate this panel stands on. Opaque and always there, so the media
+          layer's still of the tower is never what you see on this screen —
+          neither while the first pano builds nor in the gap a scene switch can
+          leave when the incoming tiles have not landed yet. The pano dissolves
+          against this instead, so every transition here is pano-to-pano. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-void" />
+
       <div
         className={[
           'absolute inset-0 overflow-hidden transition-opacity duration-700 ease-out',
