@@ -13,6 +13,8 @@ import {
 import {
   FP_FRAME_COUNT,
   FP_PLATE_FRAMES,
+  fpArc,
+  fpFrameAt,
   fpFramePath,
   nearestFpPlate,
   seamFromFp,
@@ -628,18 +630,42 @@ const Landing = ({ onView, onPoint }) => {
       floorTagShownRef.current = false
       setFloorHover(null)
       tweenRef.current?.kill()
+
+      const set = setRef.current
+      const duration = Math.abs(target - from) / FPS
+      const finish = () => {
+        stateRef.current.pos = wrapIn(set, target)
+        animatingRef.current = false
+        showFrame(wrapIn(set, target))
+        onDone?.()
+      }
+
+      if (set === 'fp') {
+        // The floorplan render's camera does not turn at a constant rate, so
+        // stepping its frames evenly would stall the tower halfway through
+        // every turn. Tween the distance travelled instead and read the frame
+        // back off it — same duration, but the revolve holds one speed and only
+        // stops where it is meant to. See FP_STEP.
+        const carrier = { arc: fpArc(from) }
+        tweenRef.current = gsap.to(carrier, {
+          arc: fpArc(target),
+          duration,
+          ease: 'none',
+          onUpdate: () => {
+            stateRef.current.pos = fpFrameAt(carrier.arc)
+            drawCurrent()
+          },
+          onComplete: finish,
+        })
+        return
+      }
+
       tweenRef.current = gsap.to(stateRef.current, {
         pos: target,
-        duration: Math.abs(target - from) / FPS,
+        duration,
         ease: 'none',
         onUpdate: drawCurrent,
-        onComplete: () => {
-          const set = setRef.current
-          stateRef.current.pos = wrapIn(set, target)
-          animatingRef.current = false
-          showFrame(wrapIn(set, target))
-          onDone?.()
-        },
+        onComplete: finish,
       })
     },
     [drawCurrent, showFrame, wrapIn],
