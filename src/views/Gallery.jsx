@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { GALLERY } from '../lib/gallery'
+import { galleryRecord } from '../lib/saveables'
+import { useVisitor } from '../hooks/useVisitor'
+import LikeButton from '../components/LikeButton'
 
 const N = GALLERY.length
 
@@ -15,6 +18,7 @@ const ringDist = (a, b) => Math.min((a - b + N) % N, (b - a + N) % N)
  * blurred fill of the same frame behind the sharp, uncropped image.
  */
 const Gallery = ({ onBack }) => {
+  const { gateOpen } = useVisitor()
   const rootRef = useRef(null)
   const coverRef = useRef(null)
   const slideRefs = useRef([])
@@ -52,8 +56,10 @@ const Gallery = ({ onBack }) => {
     })
   }
 
-  // Keyboard.
+  // Keyboard. A reload can land straight here with the entry gate still up —
+  // the keys belong to whatever is on top, so they don't bind until it lifts.
   useEffect(() => {
+    if (gateOpen) return undefined
     const onKey = (e) => {
       if (e.key === 'ArrowRight') go(1)
       else if (e.key === 'ArrowLeft') go(-1)
@@ -62,7 +68,7 @@ const Gallery = ({ onBack }) => {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [gateOpen])
 
   // Mount: wipe the inherited paper cover off (hand-over from the menu).
   useGSAP(
@@ -199,11 +205,13 @@ const Gallery = ({ onBack }) => {
         </svg>
       </button>
 
-      {/* Eyebrow — top-right. */}
-      <div className="pointer-events-none absolute right-4 top-4 z-30 md:right-8 md:top-8">
-        <span className="t-label rounded-full bg-void/30 px-3 py-1.5 text-paper/85 [backdrop-filter:blur(6px)]">
+      {/* Eyebrow + mark — top-right. The eyebrow stays click-through; only the
+          heart in the row is a target. */}
+      <div className="absolute right-4 top-4 z-30 flex items-center gap-2.5 md:right-8 md:top-8 md:gap-3">
+        <span className="t-label pointer-events-none rounded-full bg-void/30 px-3 py-1.5 text-paper/85 [backdrop-filter:blur(6px)]">
           Gallery &middot; {cur.group}
         </span>
+        <LikeButton record={galleryRecord(cur)} label={cur.title} />
       </div>
 
       {/* Prev / next. */}

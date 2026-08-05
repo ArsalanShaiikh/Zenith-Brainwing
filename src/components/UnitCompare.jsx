@@ -8,18 +8,6 @@ const ScaleIcon = () => (
   </svg>
 )
 
-const BookmarkIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
-    <path d="M6 4h12v17l-6-4-6 4V4Z" />
-  </svg>
-)
-
-const DownloadIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.6]">
-    <path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" />
-  </svg>
-)
-
 const ZoomIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.6]">
     <circle cx="11" cy="11" r="6.5" />
@@ -242,8 +230,6 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                 </tbody>
               </table>
             </div>
-
-           
           </>
         )}
       </div>

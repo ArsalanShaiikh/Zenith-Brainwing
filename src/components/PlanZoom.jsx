@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FEATURE_LABELS, sqft } from '../lib/floorplans'
+import { planRecord } from '../lib/saveables'
+import LikeButton from './LikeButton'
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 4
@@ -179,6 +181,12 @@ const PlanZoom = ({ plan, onClose }) => {
             </h3>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {/* The only place a *specific* residence can be marked. Visual
+                selection on the elevation resolves every plate to the one
+                typical-floor reference (see planForPlateRank), so without a
+                mark here a visitor could never get an individual unit onto
+                their sheet. */}
+            <LikeButton record={planRecord(plan)} label={plan.name} size="sm" tone="paper" />
             <button
               type="button"
               onClick={handleShare}

@@ -10,10 +10,13 @@ import {
   sideIndexForFrame,
 } from '../lib/floorplans'
 import { useUnitFilters } from '../hooks/useUnitFilters'
+import { planRecord } from '../lib/saveables'
 import UnitFilter from './UnitFilter'
 import UnitGrid from './UnitGrid'
 import PlanZoom from './PlanZoom'
 import UnitCompare from './UnitCompare'
+import IsoWalkthroughModal from './IsoWalkthroughModal'
+import LikeButton from './LikeButton'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
 
@@ -84,6 +87,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
 
   const [mode, setMode] = useState('visual') // 'visual' | 'search'
   const [compareOpen, setCompareOpen] = useState(false)
+  const [isoOpen, setIsoOpen] = useState(false)
   const [zoomPlan, setZoomPlan] = useState(null)
   // A residence picked off the typical-plan overlay — overrides the
   // rank-based plan until the floor/elevation selection changes again.
@@ -111,6 +115,19 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
   const plateCount = shapes.length
   const rank = Math.min(selectedRank, plateCount - 1)
   const activeRank = hoverInfo ? hoverInfo.rank : rank
+
+  // Picking a different floor or elevation returns the panel to the typical
+  // plan rather than leaving a stale residence pinned from a prior floor.
+  // Adjusted during render rather than from an effect: an effect would let the
+  // previous floor's residence paint for a frame before clearing it, and costs
+  // a second render pass to do it.
+  const selectionKey = `${rank}:${sideIdx}`
+  const [prevSelection, setPrevSelection] = useState(selectionKey)
+  if (prevSelection !== selectionKey) {
+    setPrevSelection(selectionKey)
+    setUnitKey(null)
+  }
+
   const basePlan = planForPlateRank(rank, plateCount)
   const plan = unitKey ? (PLAN_BY_KEY[unitKey] ?? basePlan) : basePlan
   const floorNumber = floorFromRank(rank, plateCount)
@@ -146,21 +163,15 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sideIdx, mode])
 
-  // Picking a different floor or elevation returns the panel to the typical
-  // plan rather than leaving a stale residence pinned from a prior floor.
-  useEffect(() => {
-    setUnitKey(null)
-  }, [rank, sideIdx])
-
   // The plan sheet renders under object-contain, so it's letterboxed inside
   // its frame; the overlay must sit over the rendered picture itself, not the
   // wider card, so its box is measured the same way PlanZoom measures its
   // sheet — from the image's own intrinsic ratio against its wrapper.
+  // Off the typical plan there is nothing to measure and the box simply isn't
+  // read — the overlay is gated on `plan.key` at the render site — so this
+  // bails rather than clearing state and forcing another pass.
   useEffect(() => {
-    if (plan.key !== 'typical') {
-      setPlanBox(null)
-      return
-    }
+    if (plan.key !== 'typical') return undefined
     const img = planImgRef.current
     const wrap = planWrapRef.current
     if (!img || !wrap) return
@@ -427,7 +438,12 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
               </p>
             </>
           ) : (
-            <UnitFilter filters={filters} onCompare={() => setCompareOpen(true)} onEnquire={onEnquire} />
+            <UnitFilter
+              filters={filters}
+              onCompare={() => setCompareOpen(true)}
+              onEnquire={onEnquire}
+              onIsoView={() => setIsoOpen(true)}
+            />
           )}
         </div>
       </section>
@@ -472,7 +488,11 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
           <>
             {/* The plan sheet — a document, so it fits whole and never crops.
                 On the typical plan, six clickable outlines sit over the
-                picture's own rendered box, one per residence. */}
+                picture's own rendered box, one per residence. The mark sits
+                inside the sheet's own frame so it reads as belonging to this
+                drawing — flat paper tone, since frosted glass has no dark
+                backdrop to lift off here. It opposes the back-to-typical pill
+                rather than sharing a corner with it. */}
             <figure className="card relative m-0 grid min-h-[46vh] flex-1 grid-rows-[minmax(0,1fr)] bg-paper-2 p-2.5 md:min-h-0 md:p-4">
               {unitKey && (
                 <button
@@ -507,7 +527,6 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
                       {TYPICAL_PLAN_ZONES.map((zone) => {
                         const label = PLAN_BY_KEY[zone.key]?.name ?? zone.key
                         const shapeProps = {
-                          key: zone.key,
                           className: 'cls-1',
                           role: 'button',
                           tabIndex: 0,
@@ -518,15 +537,22 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
                           },
                         }
                         return zone.tag === 'polygon' ? (
-                          <polygon points={zone.points} {...shapeProps} />
+                          <polygon key={zone.key} points={zone.points} {...shapeProps} />
                         ) : (
-                          <path d={zone.d} {...shapeProps} />
+                          <path key={zone.key} d={zone.d} {...shapeProps} />
                         )
                       })}
                     </svg>
                   </div>
                 )}
               </div>
+              <LikeButton
+                record={planRecord(plan)}
+                label={plan.name}
+                size="sm"
+                tone="paper"
+                className="absolute right-2 top-2 z-10 md:right-3 md:top-3 3xl:right-4 3xl:top-4"
+              />
             </figure>
 
             {/* Specs + CTA. */}
@@ -594,6 +620,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire }) 
         />
       )}
       <PlanZoom plan={zoomPlan} onClose={() => setZoomPlan(null)} />
+      <IsoWalkthroughModal open={isoOpen} onClose={() => setIsoOpen(false)} />
     </div>
   )
 }
