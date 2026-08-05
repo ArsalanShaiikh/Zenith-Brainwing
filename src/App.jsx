@@ -27,7 +27,7 @@ const AppRoutes = () => {
         path="/"
         element={
           <Landing
-            onView={(id) => navigate(`/${id}`)}
+            onView={(id, opts) => navigate(`/${id}`, opts)}
             onPoint={(pid) => navigate(`/showcase/${pid}`)}
           />
         }
@@ -38,7 +38,15 @@ const AppRoutes = () => {
         <Route
           key={v.id}
           path={`/${v.id}`}
-          element={<Shell viewId={v.id} onMenu={() => navigate('/')} />}
+          element={
+            <Shell
+              viewId={v.id}
+              // The shell hands back whatever router state it was sent in with,
+              // so a panel opened from the floor plan returns to the floor plan
+              // instead of the menu.
+              onMenu={(state) => navigate('/', state ? { state } : undefined)}
+            />
+          }
         />
       ))}
       <Route path="*" element={<Navigate to="/" replace />} />

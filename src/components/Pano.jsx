@@ -28,7 +28,7 @@ const SWITCH_MS = 700
 /** In case a stable frame never lands — a slow connection must still reveal. */
 const REVEAL_FALLBACK_MS = 1800
 
-const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
+const Pano = ({ scene, active, autorotate, look, onViewChange, className = '', ...rest }) => {
   const hostRef = useRef(null)
   const libRef = useRef(null)
   const viewerRef = useRef(null)
@@ -108,6 +108,49 @@ const Pano = ({ scene, active, autorotate, className = '', ...rest }) => {
       transitionDuration: prefersReducedMotion() ? 0 : SWITCH_MS,
     })
   }, [generation, scene])
+
+  // Point it a specific way, for panels opened from a mark on the floor plan.
+  // Declared after the scene effect so a scene is always current by the time it
+  // runs; the height/hour switch copies parameters across, so this survives.
+  const lookYaw = look?.yaw
+  const lookPitch = look?.pitch
+  const lookFov = look?.fov
+  useEffect(() => {
+    if (lookYaw == null) return
+    const view = viewerRef.current?.scene()?.view()
+    if (!view) return
+    view.setParameters({
+      yaw: lookYaw,
+      pitch: lookPitch ?? 0,
+      fov: lookFov ?? view.fov(),
+    })
+  }, [generation, lookYaw, lookPitch, lookFov])
+
+  // Live view parameters, for the `?tune` readout that exists so the plan's
+  // vantage marks can be aimed. Writes through a callback rather than state:
+  // this fires every frame while the pano moves, and re-rendering the panel at
+  // that rate would be absurd.
+  useEffect(() => {
+    if (!onViewChange) return
+    const view = viewerRef.current?.scene()?.view()
+    if (!view) return
+
+    let raf = 0
+    const emit = () => {
+      raf = 0
+      onViewChange({ yaw: view.yaw(), pitch: view.pitch(), fov: view.fov() })
+    }
+    const onChange = () => {
+      if (!raf) raf = requestAnimationFrame(emit)
+    }
+    view.addEventListener('change', onChange)
+    emit()
+
+    return () => {
+      view.removeEventListener('change', onChange)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [generation, scene, onViewChange])
 
   // Autorotate, and the off-panel idle state.
   useEffect(() => {
