@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useView } from '../hooks/useView'
 import { VIEWS } from '../lib/views'
@@ -33,6 +34,7 @@ const VIEW_PADDING = [
 ].join(' ')
 
 const Shell = ({ viewId, onMenu }) => {
+  const location = useLocation()
   const { activeView, ready, setReady, goToView, jumpToView } = useView()
   const liveRef = useRef(null)
   const panelRefs = useRef([])
@@ -60,10 +62,16 @@ const Shell = ({ viewId, onMenu }) => {
     })
   }, [])
 
+  // Whatever sent us here can say where "back" goes. Carried through opaquely:
+  // the shell doesn't need to know that a floor plan's vantage mark opened this
+  // panel, only that it was handed a way home. Absent, back means the menu.
+  const returnState = location.state?.returnState ?? null
+
   const leaveToMenu = () => {
     const cover = coverRef.current
+    const home = () => onMenu(returnState)
     if (!cover || prefersReducedMotion()) {
-      onMenu()
+      home()
       return
     }
     gsap.set(cover, { clipPath: 'inset(100% 0% 0% 0%)', autoAlpha: 1 })
@@ -71,7 +79,7 @@ const Shell = ({ viewId, onMenu }) => {
       clipPath: 'inset(0% 0% 0% 0%)',
       duration: 0.55,
       ease: 'expo.inOut',
-      onComplete: onMenu,
+      onComplete: home,
     })
   }
 

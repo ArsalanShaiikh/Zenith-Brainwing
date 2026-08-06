@@ -26,6 +26,7 @@ import { useVisitor } from '../hooks/useVisitor'
 import Logo from './Logo'
 import OrbitMenu from './OrbitMenu'
 import FloorExplorer from './FloorExplorer'
+import { viewpointNavState } from '../lib/planViews'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
 
@@ -324,9 +325,13 @@ const Landing = ({ onView, onPoint }) => {
   // so its tags are already showing.
   const stateRef = useRef(null)
   const returnPoint = location.state?.returnPoint ?? null
+  // Coming back from a pano opened off a vantage mark on the floor plan: land
+  // straight back on the plan rather than the menu, on the elevation the
+  // explorer opens by default (frame 40, one of the two floorplan stops).
+  const returnFloorplan = location.state?.returnFloorplan ?? false
   if (stateRef.current === null) {
     const from = returnPoint ? HOTSPOTS.find((h) => h.to === returnPoint) : null
-    stateRef.current = { pos: from ? from.frame : START_INDEX }
+    stateRef.current = { pos: returnFloorplan ? 40 : from ? from.frame : START_INDEX }
   }
   const dragRef = useRef({ active: false, startX: 0, committed: false })
   const animatingRef = useRef(false)
@@ -343,7 +348,9 @@ const Landing = ({ onView, onPoint }) => {
   const [overlayHtml, setOverlayHtml] = useState('')
   // Which focused mode the orbit is in. Restored to Amenities when we return
   // from a point's showcase so its tags are already up.
-  const [mode, setMode] = useState(returnPoint ? 'amenities' : 'none')
+  const [mode, setMode] = useState(
+    returnPoint ? 'amenities' : returnFloorplan ? 'floorplan' : 'none',
+  )
   const modeRef = useRef(mode)
   const setModeSafe = useCallback((m) => {
     modeRef.current = m
@@ -354,7 +361,12 @@ const Landing = ({ onView, onPoint }) => {
   // = which plate (top-to-bottom) was clicked, so it opens pre-selected.
   // `openId` bumps on each open so the explorer remounts fresh (its initial
   // elevation/floor come from these props via useState initialisers).
-  const [floorDetail, setFloorDetail] = useState({ open: false, frame: 40, rank: 0, openId: 0 })
+  const [floorDetail, setFloorDetail] = useState({
+    open: returnFloorplan,
+    frame: 40,
+    rank: 0,
+    openId: 0,
+  })
   // Floor-number tag that tracks the hovered plate on the orbit (Floorplan mode),
   // before the explorer opens. Viewport coords (root is fixed inset-0).
   const [floorHover, setFloorHover] = useState(null)
@@ -382,8 +394,8 @@ const Landing = ({ onView, onPoint }) => {
   useEffect(() => {
     if (clearedStateRef.current) return
     clearedStateRef.current = true
-    if (returnPoint) navigate('/', { replace: true, state: null })
-  }, [returnPoint, navigate])
+    if (returnPoint || returnFloorplan) navigate('/', { replace: true, state: null })
+  }, [returnPoint, returnFloorplan, navigate])
 
   const viewCb = useRef(onView)
   const pointCb = useRef(onPoint)
@@ -1265,6 +1277,7 @@ const Landing = ({ onView, onPoint }) => {
         initialRank={floorDetail.rank}
         onClose={closeFloorDetail}
         onEnquire={() => onView?.('enquire')}
+        onViewpoint={(mark) => onView?.('views', { state: viewpointNavState(mark) })}
       />
 
       {/* Loader — paper over the whole surface, wiped off on ready. */}

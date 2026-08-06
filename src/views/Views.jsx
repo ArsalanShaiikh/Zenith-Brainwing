@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 import { VANTAGES, TIMES, DEFAULT_VANTAGE } from '../lib/panos'
@@ -29,14 +30,34 @@ const Views = ({ active }) => {
   const rootRef = useRef(null)
   const metreRef = useRef(null)
   const foldRef = useRef(null)
+  const tuneRef = useRef(null)
+
+  const location = useLocation()
+  // Arrived from a vantage mark on the typical floor plan: open the crown pano
+  // already facing that way. `DEFAULT_VANTAGE` is the top of the tower, which
+  // is what the marks are shot from, so the elevation needs no special case.
+  const viewpoint = location.state?.planViewpoint ?? null
+  // The angle readout that exists so those marks can be aimed. Never on for a
+  // visitor — see the note in lib/planViews.js.
+  const tuning = new URLSearchParams(location.search).has('tune')
 
   const [i, setI] = useState(DEFAULT_VANTAGE)
   const [time, setTime] = useState('day')
   const [open, setOpen] = useState(true)
   // Matches the tile sets' own `autorotateEnabled`, minus the case where the
-  // user has asked the machine to stop moving things on its own.
-  const [spin, setSpin] = useState(() => !prefersReducedMotion())
+  // user has asked the machine to stop moving things on its own — and minus
+  // arriving on a mark, where drifting off the chosen direction is the one
+  // thing the visitor did not ask for.
+  const [spin, setSpin] = useState(() => !prefersReducedMotion() && !viewpoint)
   const [touched, setTouched] = useState(false)
+
+  // Stable, and deliberately not state: this fires on every frame the pano
+  // moves, so it writes straight to the node instead of re-rendering.
+  const showAngles = useCallback((v) => {
+    const el = tuneRef.current
+    if (!el) return
+    el.textContent = `yaw ${v.yaw.toFixed(4)}   pitch ${v.pitch.toFixed(4)}   fov ${v.fov.toFixed(4)}`
+  }, [])
 
   useViewReveal(active, rootRef)
   const { contextSafe } = useGSAP({ scope: rootRef })
@@ -124,6 +145,8 @@ const Views = ({ active }) => {
         scene={scene}
         active={active}
         autorotate={spin}
+        look={viewpoint}
+        onViewChange={tuning ? showAngles : undefined}
         className="absolute inset-0 z-0"
       />
 
@@ -190,6 +213,16 @@ const Views = ({ active }) => {
           </svg>
           <span className="t-label">Drag to look around</span>
         </p>
+
+        {/* Angle readout for aiming the floor plan's vantage marks. Only with
+            `?tune` in the address — drag the pano to the direction you want,
+            then copy these three numbers into lib/planViews.js. */}
+        {tuning && (
+          <p
+            ref={tuneRef}
+            className="pointer-events-none absolute bottom-0 left-0 rounded-full bg-void/70 px-3 py-1.5 font-mono text-[11px] tabular-nums text-paper [backdrop-filter:blur(6px)] lg:bottom-8"
+          />
+        )}
 
         <div
           data-reveal-figure
