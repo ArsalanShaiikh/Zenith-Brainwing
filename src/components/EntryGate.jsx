@@ -2,30 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useVisitor } from '../hooks/useVisitor'
+import { fullscreenSupported, requestFullscreen } from '../lib/fullscreen'
 import Logo from './Logo'
 
 /** How long the personalised welcome holds before it hands over on its own. */
 const WELCOME_DWELL = 3000
-
-/** Whether this browser will put the document itself into full screen. iOS
- *  Safari on the phone exposes the API for <video> only, so the primary button
- *  changes its promise rather than making one it can't keep. */
-const fullscreenSupported = () => {
-  if (typeof document === 'undefined') return false
-  const el = document.documentElement
-  return Boolean(el.requestFullscreen || el.webkitRequestFullscreen)
-}
-
-const requestFullscreen = async () => {
-  const el = document.documentElement
-  const req = el.requestFullscreen || el.webkitRequestFullscreen
-  if (!req) return
-  try {
-    await req.call(el, { navigationUI: 'hide' })
-  } catch {
-    /* the browser or an admin policy said no — the visit carries on regardless */
-  }
-}
 
 /** "arsalan  shaikh" → "Arsalan Shaikh". Typed on a tablet by someone who is
  *  about to see their own name set in the wordmark face, so it gets cased. */
@@ -59,6 +40,7 @@ const EntryGate = () => {
   const panelRef = useRef(null)
   const inputRef = useRef(null)
   const leavingRef = useRef(false)
+  const enteringRef = useRef(false)
 
   const [leaving, setLeaving] = useState(false)
   const [draft, setDraft] = useState(name)
@@ -92,7 +74,13 @@ const EntryGate = () => {
   }, [setStage])
 
   // --- Stage 1 → 2. -------------------------------------------------------
+  // The whole sheet is the target, not just the pill: this stands in a sales
+  // lounge, and the first thing anyone does is touch the screen. The button
+  // still reads as the affordance; the click on it simply arrives here twice
+  // (its own handler, then the sheet's), which the latch absorbs.
   const onEnterFullscreen = async () => {
+    if (enteringRef.current) return
+    enteringRef.current = true
     await requestFullscreen()
     setStage('name')
   }
@@ -161,7 +149,11 @@ const EntryGate = () => {
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Runwal Zenith"
-      className="fixed inset-0 z-200 grid place-content-center place-items-center gap-6 bg-paper px-6 text-ink md:gap-7"
+      onClick={stage === 'fullscreen' ? onEnterFullscreen : undefined}
+      className={[
+        'fixed inset-0 z-200 grid place-content-center place-items-center gap-6 bg-paper px-6 text-ink md:gap-7',
+        stage === 'fullscreen' ? 'cursor-pointer' : '',
+      ].join(' ')}
       style={{ clipPath: 'inset(0% 0% 0% 0%)' }}
     >
       {/* The lockup. Deliberately the same mark, size and position as the
@@ -199,6 +191,9 @@ const EntryGate = () => {
                 </svg>
               )}
             </button>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-ink-3/70 md:text-[11px]">
+              or tap anywhere
+            </span>
           </div>
         )}
 

@@ -5,6 +5,7 @@ import { VIEWS } from './lib/views'
 import Landing from './components/Landing'
 import Shell from './components/Shell'
 import EntryGate from './components/EntryGate'
+import FullscreenGuard from './components/FullscreenGuard'
 import Showcase from './views/Showcase'
 import Gallery from './views/Gallery'
 
@@ -50,12 +51,16 @@ const AppRoutes = () => {
  * The gate renders alongside the routes rather than instead of them: the
  * landing mounts and warms its hundred orbit frames while the visitor is still
  * being introduced, so the tower is ready the moment the paper lifts.
+ *
+ * `FullscreenGuard` is the gate's standing order: once full screen has been
+ * held, leaving it puts the same paper back until the screen is whole again.
  */
 const App = () => (
   <VisitorProvider>
     <ViewProvider>
       <AppRoutes />
       <EntryGate />
+      <FullscreenGuard />
     </ViewProvider>
   </VisitorProvider>
 )
