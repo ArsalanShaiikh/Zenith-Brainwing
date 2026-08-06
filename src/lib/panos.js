@@ -46,6 +46,14 @@ const indexByMetres = (data, dir) =>
           id: s.id,
           tileUrl: `${base}/{z}/{f}/{y}/{x}.jpg`,
           previewUrl: `${base}/preview.jpg`,
+          // The front face alone, at the first real tile level (a single
+          // 512×512 tile — level 0 is the `preview.jpg` fallback, a 256×256
+          // cube-map strip meant only to hold the screen until real tiles
+          // arrive, not for standalone display). Anywhere that wants one
+          // ordinary-looking photo of a vantage without opening the pano
+          // itself — a thumbnail, a compare card — wants this over
+          // `previewUrl`.
+          frontUrl: `${base}/1/f/0/0.jpg`,
           levels: s.levels,
           faceSize: s.faceSize,
           initialView: s.initialViewParameters,
@@ -63,12 +71,16 @@ export const TIMES = [
 ]
 
 /**
- * Ascending by elevation, and only heights that exist in *both* sets — the
+ * Descending by elevation, and only heights that exist in *both* sets — the
  * hour toggle must never be able to land on a missing tile folder.
+ *
+ * The order is the list order on the panel, and the panel reads like the tower:
+ * the crown at the top, the ground end at the bottom. Reading down the list is
+ * therefore descending — the same direction as coming down the building.
  */
 export const VANTAGES = [...day.keys()]
   .filter((m) => evening.has(m))
-  .sort((a, b) => a - b)
+  .sort((a, b) => b - a)
   .map((metres) => ({
     id: `v${metres}`,
     metres,
@@ -76,5 +88,7 @@ export const VANTAGES = [...day.keys()]
     scenes: { day: day.get(metres), evening: evening.get(metres) },
   }))
 
-/** Opens at the top of the tower: the highest pano is the one worth arriving on. */
-export const DEFAULT_VANTAGE = Math.max(VANTAGES.length - 1, 0)
+/** Opens at the top of the tower: the highest pano is the one worth arriving
+ *  on, and it now heads the list. The hour toggle keeps whichever elevation is
+ *  selected, so day and evening both open on the crown. */
+export const DEFAULT_VANTAGE = 0

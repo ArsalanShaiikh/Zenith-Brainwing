@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
+
 import { fallbackSrc } from '../lib/images'
 import { client } from "../sanity/client";
 import { urlFor } from "../sanity/image";

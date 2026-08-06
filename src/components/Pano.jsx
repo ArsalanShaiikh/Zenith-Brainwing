@@ -59,7 +59,18 @@ const SWITCH_MS = 700
 /** In case a stable frame never lands — a slow connection must still reveal. */
 const REVEAL_FALLBACK_MS = 1800
 
-const Pano = ({ scene, active, autorotate, hotspots = [], onTag, className = '', ...rest }) => {
+
+const Pano = ({
+  scene,
+  active,
+  autorotate,
+  hotspots = [],
+  onTag,
+  look,
+  onViewChange,
+  className = '',
+  ...rest
+}) => {
   const hostRef = useRef(null)
   const libRef = useRef(null)
   const viewerRef = useRef(null)
@@ -156,6 +167,7 @@ const Pano = ({ scene, active, autorotate, hotspots = [], onTag, className = '',
     })
   }, [generation, scene])
 
+
   // Dev-only hotspot placement: report the yaw/pitch under the pointer
   // instead of panning, so a caller can build a `links` entry from a click
   // rather than guessing coordinates by hand.
@@ -178,6 +190,49 @@ const Pano = ({ scene, active, autorotate, hotspots = [], onTag, className = '',
     el.addEventListener('click', handleClick)
     return () => el.removeEventListener('click', handleClick)
   }, [generation, onTag])
+
+  // Point it a specific way, for panels opened from a mark on the floor plan.
+  // Declared after the scene effect so a scene is always current by the time it
+  // runs; the height/hour switch copies parameters across, so this survives.
+  const lookYaw = look?.yaw
+  const lookPitch = look?.pitch
+  const lookFov = look?.fov
+  useEffect(() => {
+    if (lookYaw == null) return
+    const view = viewerRef.current?.scene()?.view()
+    if (!view) return
+    view.setParameters({
+      yaw: lookYaw,
+      pitch: lookPitch ?? 0,
+      fov: lookFov ?? view.fov(),
+    })
+  }, [generation, lookYaw, lookPitch, lookFov])
+
+  // Live view parameters, for the `?tune` readout that exists so the plan's
+  // vantage marks can be aimed. Writes through a callback rather than state:
+  // this fires every frame while the pano moves, and re-rendering the panel at
+  // that rate would be absurd.
+  useEffect(() => {
+    if (!onViewChange) return
+    const view = viewerRef.current?.scene()?.view()
+    if (!view) return
+
+    let raf = 0
+    const emit = () => {
+      raf = 0
+      onViewChange({ yaw: view.yaw(), pitch: view.pitch(), fov: view.fov() })
+    }
+    const onChange = () => {
+      if (!raf) raf = requestAnimationFrame(emit)
+    }
+    view.addEventListener('change', onChange)
+    emit()
+
+    return () => {
+      view.removeEventListener('change', onChange)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [generation, scene, onViewChange])
 
   // Autorotate, and the off-panel idle state.
   useEffect(() => {
@@ -206,16 +261,17 @@ const Pano = ({ scene, active, autorotate, hotspots = [], onTag, className = '',
     if (!active) viewer.renderLoop().stop()
   }, [generation, active, autorotate])
 
-  // Hold the pano back until it has a frame worth showing. The still plate in
-  // the media layer is already behind it, so this is a hand-off, not a spinner.
+  // Hold the pano back only until it has drawn something. The opaque plate
+  // below stands in until then, so an early frame costs nothing: a transparent
+  // canvas reads as that plate, and the cube preview fills in within a frame or
+  // two. Waiting for a *stable* frame instead would hold the panel dark for the
+  // whole sharpening pass, which is the wait this hand-off exists to avoid.
   useEffect(() => {
     if (!generation || live) return
     const stage = viewerRef.current?.stage()
     if (!stage) return
 
-    const onFrame = (stable) => {
-      if (stable) setLive(true)
-    }
+    const onFrame = () => setLive(true)
     stage.addEventListener('renderComplete', onFrame)
     const t = setTimeout(() => setLive(true), REVEAL_FALLBACK_MS)
 
@@ -237,7 +293,19 @@ const Pano = ({ scene, active, autorotate, hotspots = [], onTag, className = '',
 
   return (
     <div className={className} {...rest}>
-      <div className="absolute inset-0 overflow-hidden bg-void">
+      {/* The plate this panel stands on. Opaque and always there, so the media
+          layer's still of the tower is never what you see on this screen —
+          neither while the first pano builds nor in the gap a scene switch can
+          leave when the incoming tiles have not landed yet. The pano dissolves
+          against this instead, so every transition here is pano-to-pano. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-void" />
+
+      <div
+        className={[
+          'absolute inset-0 overflow-hidden transition-opacity duration-700 ease-out',
+          live ? 'opacity-100' : 'opacity-0',
+        ].join(' ')}
+      >
         <div ref={hostRef} className="absolute inset-0" />
 
         {/* The same grade the still plates get in MediaLayer. Without it the

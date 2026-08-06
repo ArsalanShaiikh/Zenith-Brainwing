@@ -10,11 +10,23 @@ import {
   framePath,
   wrapFrame,
 } from '../lib/orbit'
+import {
+  FP_FRAME_COUNT,
+  FP_PLATE_FRAMES,
+  fpArc,
+  fpFrameAt,
+  fpFramePath,
+  nearestFpPlate,
+  seamFromFp,
+  seamFromOrbit,
+  wrapFp,
+} from '../lib/floorplanOrbit'
 import { floorFromRank } from '../lib/floorplans'
 import { useVisitor } from '../hooks/useVisitor'
 import Logo from './Logo'
 import OrbitMenu from './OrbitMenu'
 import FloorExplorer from './FloorExplorer'
+import { viewpointNavState } from '../lib/planViews'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
 
@@ -62,6 +74,24 @@ const HOTSPOTS = [
 const LABEL_SPOTS = HOTSPOTS.filter((h) => h.label)
 const overlayForFrame = (frame) =>
   HOTSPOTS.find((h) => h.frame === frame && h.overlay) ?? null
+
+/**
+ * The same two plate SVGs, keyed by their frame in the *floorplan* turntable.
+ * They are traced against poses that set shares pixel-for-pixel with the
+ * landing orbit, so the identical artwork lands true on either set.
+ */
+const FP_OVERLAYS = {
+  0: floorFrontSvg, // fp-000 ≡ orbit-000 — frontal elevation
+  50: floorHighlightSvg, // fp-050 ≡ orbit-040 — 3/4 elevation
+}
+
+/** The two seam frames, warmed ahead of the rest of the floorplan set. */
+const SEAM_FIRST = Object.keys(FP_OVERLAYS).map(Number)
+
+/** How long the two frame sets cross-dissolve at a seam. Long enough to carry
+ *  the change in acuity between the two renders, short enough that it reads as
+ *  the picture resolving rather than as a transition between two screens. */
+const SEAM_FADE = 0.22
 
 /** Wrap a running axis value into a real frame number [0, FRAME_COUNT). */
 const norm = (v) => ((Math.round(v) % FRAME_COUNT) + FRAME_COUNT) % FRAME_COUNT
@@ -283,14 +313,26 @@ const Landing = ({ onView, onPoint }) => {
   })
 
   const framesRef = useRef([])
+  // The floorplan turntable, warmed in the background once the landing orbit is
+  // up. `stateRef.pos` is an index into whichever set `setRef` names, and the
+  // two only ever change hands on a seam (see lib/floorplanOrbit.js).
+  const fpFramesRef = useRef([])
+  const setRef = useRef('orbit')
+  // Drives the seam hand-over: while `from` is set, the outgoing set's seam
+  // frame is painted underneath and the incoming one fades in over it at `t`.
+  const fadeRef = useRef({ from: null, t: 0 })
   // Open on the frame of the point we're returning from (if any), else the
   // opening shot — and if we're returning from a point, reopen in Amenities mode
   // so its tags are already showing.
   const stateRef = useRef(null)
   const returnPoint = location.state?.returnPoint ?? null
+  // Coming back from a pano opened off a vantage mark on the floor plan: land
+  // straight back on the plan rather than the menu, on the elevation the
+  // explorer opens by default (frame 40, one of the two floorplan stops).
+  const returnFloorplan = location.state?.returnFloorplan ?? false
   if (stateRef.current === null) {
     const from = returnPoint ? HOTSPOTS.find((h) => h.to === returnPoint) : null
-    stateRef.current = { pos: from ? from.frame : START_INDEX }
+    stateRef.current = { pos: returnFloorplan ? 40 : from ? from.frame : START_INDEX }
   }
   const dragRef = useRef({ active: false, startX: 0, committed: false })
   const animatingRef = useRef(false)
@@ -307,10 +349,14 @@ const Landing = ({ onView, onPoint }) => {
   const [exiting, setExiting] = useState(false)
   // The current rest frame (web index) or null while turning.
   const [activeFrame, setActiveFrame] = useState(null)
+  // Which turntable is on screen. Mirrors `setRef` for render-time decisions.
+  const [frameSet, setFrameSet] = useState('orbit')
   const [overlayHtml, setOverlayHtml] = useState('')
   // Which focused mode the orbit is in. Restored to Amenities when we return
   // from a point's showcase so its tags are already up.
-  const [mode, setMode] = useState(returnPoint ? 'amenities' : 'none')
+  const [mode, setMode] = useState(
+    returnPoint ? 'amenities' : returnFloorplan ? 'floorplan' : 'none',
+  )
   const modeRef = useRef(mode)
   const setModeSafe = useCallback((m) => {
     modeRef.current = m
@@ -321,7 +367,12 @@ const Landing = ({ onView, onPoint }) => {
   // = which plate (top-to-bottom) was clicked, so it opens pre-selected.
   // `openId` bumps on each open so the explorer remounts fresh (its initial
   // elevation/floor come from these props via useState initialisers).
-  const [floorDetail, setFloorDetail] = useState({ open: false, frame: 40, rank: 0, openId: 0 })
+  const [floorDetail, setFloorDetail] = useState({
+    open: returnFloorplan,
+    frame: 40,
+    rank: 0,
+    openId: 0,
+  })
   // Floor-number tag that tracks the hovered plate on the orbit (Floorplan mode),
   // before the explorer opens. Viewport coords (root is fixed inset-0).
   const [floorHover, setFloorHover] = useState(null)
@@ -335,8 +386,10 @@ const Landing = ({ onView, onPoint }) => {
 
   const showFrame = useCallback((frame) => {
     setActiveFrame(frame)
-    const ov = frame == null ? null : overlayForFrame(frame)
-    if (ov) setOverlayHtml(ov.overlay)
+    if (frame == null) return
+    const ov =
+      setRef.current === 'fp' ? FP_OVERLAYS[frame] : overlayForFrame(frame)?.overlay
+    if (ov) setOverlayHtml(ov)
   }, [])
 
   // `returnPoint` is a one-shot hand-off from a showcase: it opens this mount in
@@ -347,8 +400,8 @@ const Landing = ({ onView, onPoint }) => {
   useEffect(() => {
     if (clearedStateRef.current) return
     clearedStateRef.current = true
-    if (returnPoint) navigate('/', { replace: true, state: null })
-  }, [returnPoint, navigate])
+    if (returnPoint || returnFloorplan) navigate('/', { replace: true, state: null })
+  }, [returnPoint, returnFloorplan, navigate])
 
   const viewCb = useRef(onView)
   const pointCb = useRef(onPoint)
@@ -357,11 +410,17 @@ const Landing = ({ onView, onPoint }) => {
     pointCb.current = onPoint
   }, [onView, onPoint])
 
-  const drawFrame = useCallback((axis) => {
-    const cv = canvasRef.current
-    const img = framesRef.current[wrapFrame(axis)]
-    if (!cv || !img || !img.complete || !img.naturalWidth) return
-    const ctx = cv.getContext('2d')
+  /** The pool and wrap that go with a set name. Both turntables happen to be
+   *  100 frames, but they are kept apart so one can be re-cut without the other
+   *  silently indexing off the end. */
+  const poolOf = useCallback(
+    (set) => (set === 'fp' ? fpFramesRef.current : framesRef.current),
+    [],
+  )
+  const wrapIn = useCallback((set, i) => (set === 'fp' ? wrapFp(i) : wrapFrame(i)), [])
+
+  const paintImg = useCallback((ctx, cv, img, alpha) => {
+    if (!img || !img.complete || !img.naturalWidth) return false
     const cw = cv.width
     const ch = cv.height
     const ir = img.naturalWidth / img.naturalHeight
@@ -378,10 +437,34 @@ const Landing = ({ onView, onPoint }) => {
       dx = 0
       dy = (ch - dh) / 2
     }
+    ctx.globalAlpha = alpha
     ctx.drawImage(img, dx, dy, dw, dh)
+    ctx.globalAlpha = 1
+    return true
   }, [])
 
-  const drawCurrent = useCallback(() => drawFrame(stateRef.current.pos), [drawFrame])
+  /**
+   * Paint the axis. Normally that is one frame of the active set; across a seam
+   * it is the outgoing set's frame with the incoming one dissolving over it.
+   * Both frames are the same camera pose, so nothing moves — only the render
+   * changes hands.
+   */
+  const drawCurrent = useCallback(() => {
+    const cv = canvasRef.current
+    if (!cv) return
+    const ctx = cv.getContext('2d')
+    const set = setRef.current
+    const img = poolOf(set)[wrapIn(set, stateRef.current.pos)]
+    const fade = fadeRef.current
+    if (fade.from) {
+      const out = poolOf(fade.from.set)[fade.from.frame]
+      if (paintImg(ctx, cv, out, 1)) paintImg(ctx, cv, img, fade.t)
+      else paintImg(ctx, cv, img, 1)
+      return
+    }
+    paintImg(ctx, cv, img, 1)
+  }, [poolOf, wrapIn, paintImg])
+
 
   // Stretch the SVG overlay across the whole image rect (same-aspect graphic).
   const positionOverlay = useCallback(() => {
@@ -443,6 +526,43 @@ const Landing = ({ onView, onPoint }) => {
       cancelled = true
     }
   }, [drawCurrent])
+
+  // --- Warm the floorplan turntable behind the landing. ------------------
+  // It never counts toward the loader: the landing is usable without it, and a
+  // second hundred frames on the progress bar would double the wait for
+  // something most visitors reach a minute later. The two seam frames go first
+  // — one of them is the very frame the hand-over lands on, so it is the only
+  // one that has to be there the moment Floorplan is picked.
+  useEffect(() => {
+    if (!ready) return undefined
+    let cancelled = false
+    const imgs = new Array(FP_FRAME_COUNT)
+    const order = [
+      ...SEAM_FIRST,
+      ...Array.from({ length: FP_FRAME_COUNT }, (_, i) => i).filter(
+        (i) => !SEAM_FIRST.includes(i),
+      ),
+    ]
+    for (const i of order) {
+      if (cancelled) break
+      const img = new Image()
+      img.decoding = 'async'
+      // Repaint if this is the frame already on screen — entering Floorplan the
+      // instant the landing settles can hand over to a frame that hasn't
+      // decoded yet, and without this the canvas would hold the outgoing render
+      // until the next drag.
+      img.onload = () => {
+        if (cancelled) return
+        if (setRef.current === 'fp' && wrapFp(stateRef.current.pos) === i) drawCurrent()
+      }
+      img.src = fpFramePath(i)
+      imgs[i] = img
+    }
+    fpFramesRef.current = imgs
+    return () => {
+      cancelled = true
+    }
+  }, [ready, drawCurrent])
 
   // --- Size the canvas to the frame, keep it sized. ---------------------
   useEffect(() => {
@@ -511,10 +631,16 @@ const Landing = ({ onView, onPoint }) => {
 
   // --- Play the turn to a rest position at a fixed 24fps. ---------------
   const playTo = useCallback(
-    (target) => {
+    (target, onDone) => {
       if (animatingRef.current) return
       const from = stateRef.current.pos
-      if (target === from) return
+      // Already there — still run the continuation, or a hand-over queued
+      // behind this turn would never fire (picking Floorplan while the tower is
+      // already resting on a plate frame is the ordinary way in).
+      if (target === from) {
+        onDone?.()
+        return
+      }
       animatingRef.current = true
       setActiveFrame(null)
       // Turning away from a plate — drop the floor tag so it never rides along
@@ -522,25 +648,103 @@ const Landing = ({ onView, onPoint }) => {
       floorTagShownRef.current = false
       setFloorHover(null)
       tweenRef.current?.kill()
+
+      const set = setRef.current
+      const duration = Math.abs(target - from) / FPS
+      const finish = () => {
+        stateRef.current.pos = wrapIn(set, target)
+        animatingRef.current = false
+        showFrame(wrapIn(set, target))
+        onDone?.()
+      }
+
+      if (set === 'fp') {
+        // The floorplan render's camera does not turn at a constant rate, so
+        // stepping its frames evenly would stall the tower halfway through
+        // every turn. Tween the distance travelled instead and read the frame
+        // back off it — same duration, but the revolve holds one speed and only
+        // stops where it is meant to. See FP_STEP.
+        const carrier = { arc: fpArc(from) }
+        tweenRef.current = gsap.to(carrier, {
+          arc: fpArc(target),
+          duration,
+          ease: 'none',
+          onUpdate: () => {
+            stateRef.current.pos = fpFrameAt(carrier.arc)
+            drawCurrent()
+          },
+          onComplete: finish,
+        })
+        return
+      }
+
       tweenRef.current = gsap.to(stateRef.current, {
         pos: target,
-        duration: Math.abs(target - from) / FPS,
+        duration,
+        ease: 'none',
+        onUpdate: drawCurrent,
+        onComplete: finish,
+      })
+    },
+    [drawCurrent, showFrame, wrapIn],
+  )
+
+  /**
+   * Change turntables. Only legal on a seam — the two sets agree on exactly two
+   * camera poses, so this is the only place the picture can stay still while
+   * the render underneath it changes. The outgoing frame keeps painting until
+   * the incoming one has fully faded up, which carries the step in acuity
+   * between the two renders without anything appearing to move.
+   */
+  const crossToSet = useCallback(
+    (set, frame, onDone) => {
+      const outSet = setRef.current
+      const outFrame = wrapIn(outSet, stateRef.current.pos)
+      setRef.current = set
+      setFrameSet(set)
+      stateRef.current.pos = frame
+      setActiveFrame(null)
+
+      if (prefersReducedMotion()) {
+        fadeRef.current = { from: null, t: 0 }
+        drawCurrent()
+        showFrame(frame)
+        onDone?.()
+        return
+      }
+
+      fadeRef.current = { from: { set: outSet, frame: outFrame }, t: 0 }
+      gsap.to(fadeRef.current, {
+        t: 1,
+        duration: SEAM_FADE,
         ease: 'none',
         onUpdate: drawCurrent,
         onComplete: () => {
-          stateRef.current.pos = norm(target)
-          animatingRef.current = false
-          showFrame(wrapFrame(target))
+          fadeRef.current = { from: null, t: 0 }
+          drawCurrent()
+          showFrame(frame)
+          onDone?.()
         },
       })
     },
-    [drawCurrent, showFrame],
+    [drawCurrent, showFrame, wrapIn],
   )
 
-  // Advance one allowed stop in a direction (+1 forward, -1 back) for the mode.
+  /**
+   * Advance one allowed stop in a direction (+1 forward, -1 back).
+   *
+   * The stops belong to whichever turntable is on screen. On the floorplan set
+   * they are its two plate frames, so a swipe revolves the tower half a turn
+   * and lands on the other elevation — and the next swipe carries on the same
+   * way round to the first again. Always one gesture, one turn, always resting
+   * where the floors are clickable, exactly as the landing behaves.
+   */
   const advance = useCallback(
     (dir) => {
-      const stops = STOPS_BY_MODE[modeRef.current] || STOPS_BY_MODE.none
+      const stops =
+        setRef.current === 'fp'
+          ? FP_PLATE_FRAMES
+          : STOPS_BY_MODE[modeRef.current] || STOPS_BY_MODE.none
       playTo(nextAllowedTarget(stateRef.current.pos, dir, stops))
     },
     [playTo],
@@ -612,8 +816,16 @@ const Landing = ({ onView, onPoint }) => {
       if (id === 'amenities') {
         setModeSafe('amenities') // frame 20 already carries the podium tag
       } else if (id === 'floorplan') {
+        // Turn the *landing* orbit to whichever plate frame is nearer, then hand
+        // over to the stabilised turntable on that seam. The tower is already
+        // sitting on the shared pose when the sets change, so the swap has
+        // nothing to move — only the render resolves.
         setModeSafe('floorplan')
-        playTo(nearestAllowedTarget(stateRef.current.pos, STOPS_BY_MODE.floorplan))
+        const target = nearestAllowedTarget(stateRef.current.pos, STOPS_BY_MODE.floorplan)
+        playTo(target, () => {
+          const seam = seamFromOrbit(wrapFrame(target))
+          if (seam) crossToSet('fp', seam.fp)
+        })
       } else {
         // Views / Location / Enquire — wipe paper and route to the page.
         const cover = coverRef.current
@@ -631,16 +843,38 @@ const Landing = ({ onView, onPoint }) => {
         })
       }
     },
-    [playTo, setModeSafe],
+    [playTo, crossToSet, setModeSafe],
   )
 
-  // Leave a mode: turn the tower back to the opening frame by the shortest path,
-  // then the menu returns (menuVisible flips true when we land on START_INDEX).
+  /**
+   * Leave a mode and come home to the opening frame.
+   *
+   * From the floorplan turntable that is three moves, not one: revolve to the
+   * nearest seam, hand back to the landing orbit there, and only then carry on
+   * turning to the opening shot. Going straight home would mean swapping sets
+   * on a pose the two don't share, and the tower would jump. Because the seam
+   * is a real frame of both sets, the whole thing reads as one continuous turn
+   * — the visitor never learns there were two turntables.
+   */
   const exitMode = useCallback(() => {
     setInteracted(true)
     setModeSafe('none')
-    playTo(nearestAllowedTarget(stateRef.current.pos, [START_INDEX]))
-  }, [playTo, setModeSafe])
+    const home = () => playTo(nearestAllowedTarget(stateRef.current.pos, [START_INDEX]))
+
+    if (setRef.current !== 'fp') {
+      home()
+      return
+    }
+    const plate = nearestFpPlate(stateRef.current.pos)
+    playTo(plate, () => {
+      const seam = seamFromFp(wrapFp(plate))
+      if (!seam) {
+        home()
+        return
+      }
+      crossToSet('orbit', seam.orbit, home)
+    })
+  }, [playTo, crossToSet, setModeSafe])
 
   // Floorplan mode: a click on a floor plate ranks it among the elevation's
   // plates (top-to-bottom) and opens the explorer docked, on that floor.
@@ -658,8 +892,13 @@ const Landing = ({ onView, onPoint }) => {
     if (rank < 0) return
     floorTagShownRef.current = false
     setFloorHover(null)
-    setFloorDetail((d) => ({ open: true, frame: norm(stateRef.current.pos), rank, openId: d.openId + 1 }))
-  }, [])
+    // The explorer keys its elevation off the *landing orbit's* frame numbers
+    // (FLOOR_SIDES in floorplans.js), so a plate clicked on the floorplan
+    // turntable is handed over as its seam twin rather than its own index.
+    const here = wrapIn(setRef.current, stateRef.current.pos)
+    const frame = setRef.current === 'fp' ? (seamFromFp(here)?.orbit ?? 40) : here
+    setFloorDetail((d) => ({ open: true, frame, rank, openId: d.openId + 1 }))
+  }, [wrapIn])
 
   const closeFloorDetail = useCallback(() => {
     setFloorDetail((d) => ({ ...d, open: false }))
@@ -704,8 +943,16 @@ const Landing = ({ onView, onPoint }) => {
 
   // --- SVG overlay (Floorplan mode): wipe it up, then run a single light down
   //     the plates as a "hoverable" cue. ----------------------------------
+  // The plates only come up once the floorplan turntable has the screen and the
+  // tower is rested on one of the two poses traced against. Deliberately not on
+  // the landing orbit's twin of that pose, even though the artwork would fit:
+  // they would wipe on for the approach, then wipe again when the sets change
+  // hands. Waiting for the seam means one entrance, after the dissolve settles.
   const hasOverlay =
-    mode === 'floorplan' && activeFrame != null && !!overlayForFrame(activeFrame)
+    mode === 'floorplan' &&
+    frameSet === 'fp' &&
+    activeFrame != null &&
+    FP_OVERLAYS[activeFrame] != null
 
   useGSAP(
     () => {
@@ -934,7 +1181,7 @@ const Landing = ({ onView, onPoint }) => {
           ref={hintRef}
           aria-hidden="true"
           className={[
-            'pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2',
+            'pointer-events-none absolute left-1/2 bottom-8 flex  -translate-x-1/2 -translate-y-1/2',
             'items-center gap-3 rounded-full px-4 py-2',
             'glass-surface text-ink shadow-[0_14px_40px_-18px_rgb(0_0_0/0.7)]',
             'transition-opacity duration-500',
@@ -1068,6 +1315,7 @@ const Landing = ({ onView, onPoint }) => {
         initialRank={floorDetail.rank}
         onClose={closeFloorDetail}
         onEnquire={() => onView?.('enquire')}
+        onViewpoint={(mark) => onView?.('views', { state: viewpointNavState(mark) })}
       />
 
       {/* Loader — paper over the whole surface, wiped off on ready. */}
