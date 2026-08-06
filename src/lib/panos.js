@@ -46,6 +46,14 @@ const indexByMetres = (data, dir) =>
           id: s.id,
           tileUrl: `${base}/{z}/{f}/{y}/{x}.jpg`,
           previewUrl: `${base}/preview.jpg`,
+          // The front face alone, at the first real tile level (a single
+          // 512×512 tile — level 0 is the `preview.jpg` fallback, a 256×256
+          // cube-map strip meant only to hold the screen until real tiles
+          // arrive, not for standalone display). Anywhere that wants one
+          // ordinary-looking photo of a vantage without opening the pano
+          // itself — a thumbnail, a compare card — wants this over
+          // `previewUrl`.
+          frontUrl: `${base}/1/f/0/0.jpg`,
           levels: s.levels,
           faceSize: s.faceSize,
           initialView: s.initialViewParameters,

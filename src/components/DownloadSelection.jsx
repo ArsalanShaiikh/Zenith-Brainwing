@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useVisitor } from '../hooks/useVisitor'
+import ShareQr from './ShareQr'
 
 /** How long the "saved" confirmation holds before the row offers again. */
 const DONE_DWELL = 2800
@@ -18,6 +19,15 @@ const COPY = {
   error: 'Sheet failed — retry',
 }
 
+const QrIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
+    <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1" />
+    <rect x="14" y="3.5" width="6.5" height="6.5" rx="1" />
+    <rect x="3.5" y="14" width="6.5" height="6.5" rx="1" />
+    <path d="M14.5 14.5h2.5v2.5h-2.5zM19.5 14.5h1v1h-1zM14.5 19.5h1v1h-1zM19.5 19.5h1v1h-1z" fill="currentColor" stroke="none" />
+  </svg>
+)
+
 /**
  * The one *action* in a box otherwise full of destinations, so it is the one
  * thing in there wearing solid ink rather than the sheet's glass. It sits above
@@ -32,6 +42,8 @@ const DownloadSelection = () => {
   const rootRef = useRef(null)
   const barRef = useRef(null)
   const [state, setState] = useState('idle')
+  const [qrBusy, setQrBusy] = useState(false)
+  const [qrUrl, setQrUrl] = useState(null)
 
   const empty = savedCount === 0
   const busy = state === 'working'
@@ -73,6 +85,29 @@ const DownloadSelection = () => {
     } catch (err) {
       console.error('Could not build the selection sheet', err)
       setState('error')
+    }
+  }
+
+  /**
+   * Hosts the sheet and shows a QR code for it — the visitor scans with their
+   * own phone and the PDF opens right there, ready for them to save or share
+   * on to WhatsApp/Mail themselves, from a device that's actually signed into
+   * those apps. No messaging API, no per-visitor send.
+   */
+  const onQr = async () => {
+    if (empty || qrBusy) return
+    setQrBusy(true)
+    try {
+      const { buildPreferenceSheet, sheetFilename } = await import('../lib/preferencePdf')
+      const { uploadSheet } = await import('../lib/pdfPickup')
+      const blob = await buildPreferenceSheet({ name, saved })
+      const filename = sheetFilename(name)
+      const url = await uploadSheet(blob, filename)
+      setQrUrl(url)
+    } catch (err) {
+      console.error('Could not build a QR code for the selection sheet', err)
+    } finally {
+      setQrBusy(false)
     }
   }
 
@@ -149,6 +184,25 @@ const DownloadSelection = () => {
           <span ref={barRef} className="block h-px w-1/4 bg-brass-lift opacity-0" />
         </span>
       </button>
+
+      {/* QR pickup — scan with your own phone instead of the kiosk downloading
+          it. Text label, not icon-only: it's the one other action here and the
+          row has room now that WhatsApp/email aren't sitting beside it. */}
+      {!empty && (
+        <button
+          type="button"
+          onClick={onQr}
+          disabled={qrBusy}
+          className="mt-1.5 flex w-full items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-left text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-50 md:px-3"
+        >
+          <QrIcon />
+          <span className="text-[10px] uppercase tracking-[0.11em] md:text-[10.5px]">
+            {qrBusy ? 'Building your code…' : 'Scan to get it on your phone'}
+          </span>
+        </button>
+      )}
+
+      <ShareQr url={qrUrl} onClose={() => setQrUrl(null)} />
     </div>
   )
 }

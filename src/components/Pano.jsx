@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { prefersReducedMotion } from '../Gsapconfig'
 
 /**
@@ -19,6 +19,37 @@ import { prefersReducedMotion } from '../Gsapconfig'
 /** Slow enough not to fight the interface, fast enough to read as alive. */
 const AUTOROTATE = { yawSpeed: 0.028, targetPitch: 0, targetFov: Math.PI / 2 }
 
+/** A floating nav dot plus its always-on label — Marzipano hotspots are
+ *  plain DOM, positioned and reprojected by the library itself as the view
+ *  moves, so this builds real elements rather than JSX. */
+function buildLinkHotspotElement({ label, onClick }) {
+  const wrap = document.createElement('div')
+  wrap.className =
+    'flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5'
+
+  const dot = document.createElement('button')
+  dot.type = 'button'
+  dot.setAttribute('aria-label', `Go to ${label}`)
+  dot.className =
+    'relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/80 bg-white/25 shadow-[0_4px_16px_-4px_rgb(0_0_0/0.6)] backdrop-blur-sm transition-transform duration-150 hover:scale-110'
+  dot.innerHTML =
+    '<span class="absolute inset-0 rounded-full bg-white/40 animate-ping"></span>' +
+    '<span class="relative h-2.5 w-2.5 rounded-full bg-white"></span>'
+  dot.addEventListener('click', (e) => {
+    e.stopPropagation()
+    onClick?.()
+  })
+
+  const tag = document.createElement('span')
+  tag.className =
+    'pointer-events-none whitespace-nowrap rounded-full bg-void/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-paper opacity-90'
+  tag.textContent = label
+
+  wrap.appendChild(dot)
+  wrap.appendChild(tag)
+  return wrap
+}
+
 /** How long after a drag the drift picks itself back up. */
 const IDLE_MS = 3600
 
@@ -28,11 +59,29 @@ const SWITCH_MS = 700
 /** In case a stable frame never lands — a slow connection must still reveal. */
 const REVEAL_FALLBACK_MS = 1800
 
-const Pano = ({ scene, active, autorotate, look, onViewChange, className = '', ...rest }) => {
+
+const Pano = ({
+  scene,
+  active,
+  autorotate,
+  hotspots = [],
+  onTag,
+  look,
+  onViewChange,
+  className = '',
+  ...rest
+}) => {
   const hostRef = useRef(null)
   const libRef = useRef(null)
   const viewerRef = useRef(null)
   const scenesRef = useRef(new Map())
+
+  // Read at scene-creation time only (see below) — kept in a ref so a new
+  // `hotspots` array identity each render doesn't reopen the scene effect.
+  const hotspotsRef = useRef(hotspots)
+  useLayoutEffect(() => {
+    hotspotsRef.current = hotspots
+  })
 
   // Bumped once per constructed viewer rather than set to `true`, so the
   // scene/movement effects below re-run against a *new* viewer — under
@@ -94,6 +143,15 @@ const Pano = ({ scene, active, autorotate, look, onViewChange, className = '', .
           pinFirstLevel: true,
         }),
       }
+      // Only ever attached the moment this scene is first built — Pano is
+      // remounted fresh per panorama by its caller, so there is no later
+      // point where the link set for an already-built scene would change.
+      hotspotsRef.current.forEach((h) => {
+        entry.scene
+          .hotspotContainer()
+          .createHotspot(buildLinkHotspotElement(h), { yaw: h.yaw, pitch: h.pitch })
+      })
+
       scenesRef.current.set(scene.id, entry)
     }
 
@@ -108,6 +166,30 @@ const Pano = ({ scene, active, autorotate, look, onViewChange, className = '', .
       transitionDuration: prefersReducedMotion() ? 0 : SWITCH_MS,
     })
   }, [generation, scene])
+
+
+  // Dev-only hotspot placement: report the yaw/pitch under the pointer
+  // instead of panning, so a caller can build a `links` entry from a click
+  // rather than guessing coordinates by hand.
+  useEffect(() => {
+    if (!onTag) return undefined
+    const el = hostRef.current
+    const viewer = viewerRef.current
+    if (!el || !viewer) return undefined
+
+    const handleClick = (e) => {
+      const rect = el.getBoundingClientRect()
+      const view = viewer.scene()?.view()
+      const coords = view?.screenToCoordinates?.({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      })
+      if (coords) onTag({ yaw: coords.yaw, pitch: coords.pitch })
+    }
+
+    el.addEventListener('click', handleClick)
+    return () => el.removeEventListener('click', handleClick)
+  }, [generation, onTag])
 
   // Point it a specific way, for panels opened from a mark on the floor plan.
   // Declared after the scene effect so a scene is always current by the time it
@@ -250,6 +332,18 @@ const Pano = ({ scene, active, autorotate, look, onViewChange, className = '', .
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(11_10_8/0.6)_0%,rgb(11_10_8/0.16)_32%,rgb(11_10_8/0)_60%)]"
         />
       </div>
+
+      {/* Loading cover. Opaque until the pano has a frame worth showing, and
+          fades OUT rather than the pano fading in — the pano itself stays
+          permanently mounted above, so there is never a gap where the media
+          plate behind Views can bleed through. */}
+      <div
+        aria-hidden="true"
+        className={[
+          'pointer-events-none absolute inset-0 z-10 bg-void transition-opacity duration-700 ease-out',
+          live ? 'opacity-0' : 'opacity-100',
+        ].join(' ')}
+      />
     </div>
   )
 }

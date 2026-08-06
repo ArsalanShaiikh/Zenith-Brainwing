@@ -285,7 +285,7 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
 const Landing = ({ onView, onPoint }) => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { gateOpen } = useVisitor()
+  const { gateOpen, name } = useVisitor()
   const rootRef = useRef(null)
   const canvasRef = useRef(null)
   const loaderRef = useRef(null)
@@ -300,6 +300,7 @@ const Landing = ({ onView, onPoint }) => {
   const overlayRef = useRef(null)
   const floorTagRef = useRef(null)
   const floorTagShownRef = useRef(false)
+  const nameGreetingRef = useRef(null)
   // Drives the ambient "light running down the plates" loop and its hover pause.
   const overlayAnim = useRef({
     hovering: false,
@@ -340,6 +341,11 @@ const Landing = ({ onView, onPoint }) => {
   const [progress, setProgress] = useState(0)
   const [ready, setReady] = useState(false)
   const [hinting, setHinting] = useState(true)
+
+  // The "Welcome {name}"\ greeting shows only until the visitor's first
+  // interaction with the screen, then fades away. The Welcome and name will be shown again if website is reloaded,
+  //  but the greetinng will not be shown again unitl the user interacts with the screen again.
+  const [interacted, setInteracted] = useState(false)
   const [exiting, setExiting] = useState(false)
   // The current rest frame (web index) or null while turning.
   const [activeFrame, setActiveFrame] = useState(null)
@@ -752,6 +758,7 @@ const Landing = ({ onView, onPoint }) => {
     d.committed = false
     e.currentTarget.setPointerCapture?.(e.pointerId)
     setHinting(false)
+    setInteracted(true)
   }, [])
 
   const onPointerMove = useCallback(
@@ -781,6 +788,7 @@ const Landing = ({ onView, onPoint }) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
       e.preventDefault()
       setHinting(false)
+      setInteracted(true)
       advance(e.key === 'ArrowRight' ? 1 : -1)
     }
     window.addEventListener('keydown', onKey)
@@ -804,6 +812,7 @@ const Landing = ({ onView, onPoint }) => {
 
   const onMenuSelect = useCallback(
     (id) => {
+      setInteracted(true)
       if (id === 'amenities') {
         setModeSafe('amenities') // frame 20 already carries the podium tag
       } else if (id === 'floorplan') {
@@ -848,6 +857,7 @@ const Landing = ({ onView, onPoint }) => {
    * — the visitor never learns there were two turntables.
    */
   const exitMode = useCallback(() => {
+    setInteracted(true)
     setModeSafe('none')
     const home = () => playTo(nearestAllowedTarget(stateRef.current.pos, [START_INDEX]))
 
@@ -870,6 +880,7 @@ const Landing = ({ onView, onPoint }) => {
   // plates (top-to-bottom) and opens the explorer docked, on that floor.
   const onFloorPlateClick = useCallback((e) => {
     if (modeRef.current !== 'floorplan') return
+    setInteracted(true)
     const root = overlayRef.current
     const plate = e.target.closest?.('.cls-1')
     if (!root || !plate) return
@@ -919,8 +930,15 @@ const Landing = ({ onView, onPoint }) => {
           pointerEvents: ctaVisible ? 'auto' : 'none',
         })
       }
+      if (nameGreetingRef.current) {
+        gsap.to(nameGreetingRef.current, {
+          autoAlpha: interacted ? 0 : 1,
+          duration: 0.5,
+          ease: 'power2.out',
+        })
+      }
     },
-    { dependencies: [chromeVisible, backVisible, ctaVisible], scope: rootRef },
+    { dependencies: [chromeVisible, backVisible, ctaVisible, interacted], scope: rootRef },
   )
 
   // --- SVG overlay (Floorplan mode): wipe it up, then run a single light down
@@ -1163,7 +1181,7 @@ const Landing = ({ onView, onPoint }) => {
           ref={hintRef}
           aria-hidden="true"
           className={[
-            'pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2',
+            'pointer-events-none absolute left-1/2 bottom-8 flex  -translate-x-1/2 -translate-y-1/2',
             'items-center gap-3 rounded-full px-4 py-2',
             'glass-surface text-ink shadow-[0_14px_40px_-18px_rgb(0_0_0/0.7)]',
             'transition-opacity duration-500',
@@ -1195,6 +1213,26 @@ const Landing = ({ onView, onPoint }) => {
             A 52-storey landmark, seen from every side
           </p>
         </div>
+
+        {/* The visitor's name — the right side of the frame, vertically
+            centred, clear of both the menu and the hero block on the left. */}
+        {name && (
+          <div
+            ref={nameGreetingRef}
+            className={[
+              'absolute right-[2%] top-[41%] -translate-y-1/2 text-left',
+              'sm:right-[18%] md:right-[20%] lg:right-[15%] 3xl:right-[24%]',
+              '[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]',
+            ].join(' ')}
+          >
+            <p className="-translate-x-4 text-[14px] leading-none tracking-[0.16em] text-brass-lift md:text-[15px] lg:text-[40px]  2xl:text-[60px]  2xl:-translate-x-6  3xl:translate-x-[170px] 3xl:text-[75px]">
+              Welcome
+            </p>
+            <p className="absolute left-40 lg:left-42 2xl:left-64 3xl:left-131 top-full mt-1 whitespace-nowrap font-[family-name:var(--font-ui)] text-[clamp(32px,5vw,54px)] leading-[0.85] tracking-[-0.02em] text-brass-lift 2xl:text-[73px] 3xl:text-[93px] lg:text-[50px] ">
+              {name}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Back — leave a mode, turning the tower back to the opening frame. */}

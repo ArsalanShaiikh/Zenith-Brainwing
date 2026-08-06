@@ -45,10 +45,10 @@ const Views = ({ active }) => {
   const [time, setTime] = useState('day')
   const [open, setOpen] = useState(true)
   // Matches the tile sets' own `autorotateEnabled`, minus the case where the
-  // user has asked the machine to stop moving things on its own — and minus
-  // arriving on a mark, where drifting off the chosen direction is the one
-  // thing the visitor did not ask for.
-  const [spin, setSpin] = useState(() => !prefersReducedMotion() && !viewpoint)
+  // user has asked the machine to stop moving things on its own. Arriving on
+  // a mark still opens facing the chosen direction (`look`, below) — it just
+  // doesn't hold there once the pano is live.
+  const [spin, setSpin] = useState(() => !prefersReducedMotion())
   const [touched, setTouched] = useState(false)
 
   // Stable, and deliberately not state: this fires on every frame the pano
@@ -110,15 +110,19 @@ const Views = ({ active }) => {
     })
   })
 
-  // Warm the other hour's cube preview at this height, so the toggle dissolves
-  // on the spot instead of stalling on a first fetch. One request, and the
-  // viewer reads it straight back out of cache.
+  // Warm every vantage's cube preview at both hours, so switching elevation
+  // or toggling day/evening dissolves on the spot instead of stalling on a
+  // first fetch — each is one small request, and the viewer reads it straight
+  // back out of cache when it actually switches there.
   useEffect(() => {
     if (!active) return
-    const other = VANTAGES[i].scenes[time === 'day' ? 'evening' : 'day']
-    const img = new Image()
-    img.src = other.previewUrl
-  }, [active, i, time])
+    VANTAGES.forEach((v) => {
+      TIMES.forEach((t) => {
+        const img = new Image()
+        img.src = v.scenes[t.id].previewUrl
+      })
+    })
+  }, [active])
 
   return (
     <div

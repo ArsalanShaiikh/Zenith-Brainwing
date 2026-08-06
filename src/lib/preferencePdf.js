@@ -605,16 +605,23 @@ export const buildPreferenceSheet = async ({ name, saved = [], date = new Date()
   return new Blob([bytes], { type: 'application/pdf' })
 }
 
-/** Build the sheet and hand it to the browser's downloader. */
-export const downloadPreferenceSheet = async ({ name, saved }) => {
-  const blob = await buildPreferenceSheet({ name, saved })
+/** Hand a blob to the browser's downloader. Shared by the plain download and
+ *  by the WhatsApp/email share fallback, which downloads the sheet first
+ *  since neither a wa.me nor a mailto link can attach a local file itself. */
+export const downloadBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = sheetFilename(name)
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   a.remove()
   // Give the download a tick to start before the blob goes away.
   setTimeout(() => URL.revokeObjectURL(url), 4000)
+}
+
+/** Build the sheet and hand it to the browser's downloader. */
+export const downloadPreferenceSheet = async ({ name, saved }) => {
+  const blob = await buildPreferenceSheet({ name, saved })
+  downloadBlob(blob, sheetFilename(name))
 }

@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sqft } from '../lib/floorplans'
 
+const CubeIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
+    <path d="M12 3v9M4 7.5l8 4.5M20 7.5l-8 4.5" />
+  </svg>
+)
+
 /**
  * Search by unit — the faceted half of the floorplan explorer, ported from the
  * `filtering-plans` prototype and re-cut in the Zenith palette.
@@ -8,7 +15,7 @@ import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sq
  * Results themselves render as a card grid alongside this panel (see
  * UnitGrid) — this column stays limited to facets, compare, and enquiry.
  */
-const UnitFilter = ({ filters, onCompare, onEnquire }) => {
+const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
   const { state, set, toggle, reset, results, dirty, compare, toggleCompare, clearCompare } = filters
 
   return (
@@ -108,6 +115,15 @@ const UnitFilter = ({ filters, onCompare, onEnquire }) => {
             </button>
           </>
         )}
+
+        <button
+          type="button"
+          onClick={() => onIsoView?.()}
+          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-full border border-ink/15 py-2 text-[10px] uppercase tracking-[0.16em] text-ink-2 transition-colors duration-200 hover:bg-ink hover:text-paper"
+        >
+          <CubeIcon />
+          View 3D interiors
+        </button>
       </div>
 
       {/* ---------- Enquire ---------- */}

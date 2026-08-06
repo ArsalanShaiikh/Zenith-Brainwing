@@ -74,6 +74,7 @@ const Showcase = () => {
         firstRun.current = false
         return
       }
+      
       const el = slideRefs.current[idx]
       if (!el) return
       syncVideos(idx)
@@ -252,4 +253,12 @@ const Showcase = () => {
   )
 }
 
-export default Showcase
+export default Showcase;
+
+
+
+
+
+
+
+

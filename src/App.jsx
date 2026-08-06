@@ -8,6 +8,7 @@ import EntryGate from './components/EntryGate'
 import FullscreenGuard from './components/FullscreenGuard'
 import Showcase from './views/Showcase'
 import Gallery from './views/Gallery'
+import InteriorViewer from './InteriorViewer'
 
 /**
  * Routes are the single source of truth for where you are:
@@ -35,6 +36,9 @@ const AppRoutes = () => {
       />
       <Route path="/showcase/:id" element={<Showcase />} />
       <Route path="/gallery" element={<Gallery onBack={() => navigate('/')} />} />
+      {import.meta.env.DEV && (
+        <Route path="/dev/interiors" element={<InteriorViewer />} />
+      )}
       {VIEWS.map((v) => (
         <Route
           key={v.id}

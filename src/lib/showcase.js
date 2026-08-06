@@ -15,6 +15,8 @@ export const SHOWCASE = {
     media: [
       { type: 'video', src: '/showcase/rooftop/rooftop.mp4', poster: '/showcase/rooftop/rooftop.jpg' },
       { type: 'image', webp: '/showcase/rooftop/rooftop.webp', jpg: '/showcase/rooftop/rooftop.jpg' },
+      { type: 'image', webp: '/showcase/rooftop/rooftop1.webp', jpg: '/showcase/rooftop/rooftop1.jpg' },
+      { type: 'image', webp: '/showcase/rooftop/rooftop2.webp', jpg: '/showcase/rooftop/rooftop2.jpg' },
     ],
   },
   // Single-media point: shown static (no pan/loop) — see Showcase.jsx.

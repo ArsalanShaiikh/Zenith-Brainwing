@@ -16,6 +16,7 @@ import UnitFilter from './UnitFilter'
 import UnitGrid from './UnitGrid'
 import PlanZoom from './PlanZoom'
 import UnitCompare from './UnitCompare'
+import IsoWalkthroughModal from './IsoWalkthroughModal'
 import LikeButton from './LikeButton'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
@@ -91,7 +92,11 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
 
   const [mode, setMode] = useState('visual') // 'visual' | 'search'
   const [compareOpen, setCompareOpen] = useState(false)
+  const [isoOpen, setIsoOpen] = useState(false)
   const [zoomPlan, setZoomPlan] = useState(null)
+  // Off by default — the marks are a side-trip off reading the plan, not
+  // part of it, so they stay out of the way until asked for.
+  const [showVantages, setShowVantages] = useState(false)
   // A residence picked off the typical-plan overlay — overrides the
   // rank-based plan until the floor/elevation selection changes again.
   const [unitKey, setUnitKey] = useState(null)
@@ -441,7 +446,12 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
               </p>
             </>
           ) : (
-            <UnitFilter filters={filters} onCompare={() => setCompareOpen(true)} onEnquire={onEnquire} />
+            <UnitFilter
+              filters={filters}
+              onCompare={() => setCompareOpen(true)}
+              onEnquire={onEnquire}
+              onIsoView={() => setIsoOpen(true)}
+            />
           )}
         </div>
       </section>
@@ -525,7 +535,6 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
                       {TYPICAL_PLAN_ZONES.map((zone) => {
                         const label = PLAN_BY_KEY[zone.key]?.name ?? zone.key
                         const shapeProps = {
-                          key: zone.key,
                           className: 'cls-1',
                           role: 'button',
                           tabIndex: 0,
@@ -536,9 +545,9 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
                           },
                         }
                         return zone.tag === 'polygon' ? (
-                          <polygon points={zone.points} {...shapeProps} />
+                          <polygon key={zone.key} points={zone.points} {...shapeProps} />
                         ) : (
-                          <path d={zone.d} {...shapeProps} />
+                          <path key={zone.key} d={zone.d} {...shapeProps} />
                         )
                       })}
                     </svg>
@@ -551,8 +560,9 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
                     residence outlines use), so they stay on their spot at any
                     size. Their own layer rather than inside the outline SVG:
                     that svg is click-through by design, and these are the one
-                    thing on the sheet that is not a residence. */}
-                {plan.key === 'typical' && planBox && (
+                    thing on the sheet that is not a residence. Hidden until
+                    the eye toggle under the heart asks for them. */}
+                {plan.key === 'typical' && planBox && showVantages && (
                   <div
                     className="pointer-events-none absolute"
                     style={{ left: planBox.left, top: planBox.top, width: planBox.width, height: planBox.height }}
@@ -593,13 +603,34 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
                   </div>
                 )}
               </div>
-              <LikeButton
-                record={planRecord(plan)}
-                label={plan.name}
-                size="sm"
-                tone="paper"
-                className="absolute right-2 top-2 z-10 md:right-3 md:top-3 3xl:right-4 3xl:top-4"
-              />
+              <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-2 md:right-3 md:top-3 3xl:right-4 3xl:top-4">
+                <LikeButton record={planRecord(plan)} label={plan.name} size="sm" tone="paper" />
+
+                {/* Reveals the four vantage marks above rather than opening
+                    one itself — matches LikeButton's own paper tone, since
+                    both live in the same corner. */}
+                {plan.key === 'typical' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVantages((s) => !s)}
+                    aria-pressed={showVantages}
+                    aria-label={showVantages ? 'Hide the view points on the plan' : 'Show the view points on the plan'}
+                    title={showVantages ? 'Hide view points' : 'Show view points'}
+                    className={[
+                      'grid h-9 w-9 place-items-center rounded-full border transition-colors duration-200',
+                      'md:h-10 md:w-10 3xl:h-11 3xl:w-11 touch:h-11 touch:w-11',
+                      showVantages
+                        ? 'border-brass/55 bg-[rgb(162_138_0/0.08)] text-brass-ink'
+                        : 'border-ink/15 bg-paper text-ink-2 hover:bg-paper-2',
+                    ].join(' ')}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.5]">
+                      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" />
+                      <circle cx="12" cy="12" r="2.6" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </figure>
 
             {/* Specs + CTA. */}
@@ -667,6 +698,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
         />
       )}
       <PlanZoom plan={zoomPlan} onClose={() => setZoomPlan(null)} />
+      <IsoWalkthroughModal open={isoOpen} onClose={() => setIsoOpen(false)} />
     </div>
   )
 }
