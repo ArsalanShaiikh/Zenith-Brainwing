@@ -1220,17 +1220,20 @@ const Landing = ({ onView, onPoint }) => {
           <div
             ref={nameGreetingRef}
             className={[
-              'absolute right-[2%] top-[41%] -translate-y-1/2 text-left',
-              'sm:right-[18%] md:right-[20%] lg:right-[15%] 3xl:right-[24%]',
+              'absolute right-[4%] top-[37%] max-w-[68%] -translate-y-1/2 text-left break-words',
+              'min-[430px]:right-[6%] min-[430px]:top-[39%]',
+              'sm:right-[18%] sm:top-[41%] sm:max-w-none',
+              'md:right-[20%] lg:right-[15%] 3xl:right-[18%]',
               '[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]',
             ].join(' ')}
           >
-            <p className="-translate-x-4 text-[14px] leading-none tracking-[0.16em] text-brass-lift md:text-[15px] lg:text-[40px]  2xl:text-[60px]  2xl:-translate-x-6  3xl:translate-x-[170px] 3xl:text-[75px]">
-              Welcome
+            <p className="font-fine text-[clamp(15px,4vw,32px)] leading-none tracking-[-0.01em] text-paper sm:text-[clamp(20px,2.4vw,32px)]">
+              Welcome,
             </p>
-            <p className="absolute left-40 lg:left-42 2xl:left-64 3xl:left-131 top-full mt-1 whitespace-nowrap font-[family-name:var(--font-ui)] text-[clamp(32px,5vw,54px)] leading-[0.85] tracking-[-0.02em] text-brass-lift 2xl:text-[73px] 3xl:text-[93px] lg:text-[50px] ">
+            <p className="mt-1  textfont-fine text-[clamp(30px,11vw,96px)] leading-[0.9] tracking-[-0.02em] text-brass-lift sm:text-[clamp(44px,7.5vw,96px)] text-4xl=80px">
               {name}
             </p>
+            <span aria-hidden="true" className="mt-3 block h-0.5 w-30 bg-brass-lift/70 md:w-28" />
           </div>
         )}
       </div>
