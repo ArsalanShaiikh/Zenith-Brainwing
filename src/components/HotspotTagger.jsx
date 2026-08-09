@@ -108,9 +108,13 @@ export default function HotspotTagger({
     );
   };
 
+  // `data-no-drag` parks the stage's pan while the pointer is over this panel:
+  // the frame slider and the room select aren't buttons, so they don't match
+  // the stage's default park selector on their own.
   return (
     <div
       data-hotspot-tagger-panel
+      data-no-drag
       className="absolute bottom-4 right-4 z-20 flex flex-col gap-3 w-80 rounded-xl border border-neutral-700 bg-neutral-900/95 p-4 text-neutral-100 text-sm shadow-2xl"
     >
       <div className="flex items-center justify-between">

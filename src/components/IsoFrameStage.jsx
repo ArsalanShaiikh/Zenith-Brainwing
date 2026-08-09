@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import useFramePreloader from '../hooks/useFramePreloader'
+import useIsoPan from '../hooks/useIsoPan'
 import { getHotspotPosition } from '../hotspots/interpolateHotspot'
-import { requestFullscreen } from '../lib/fullscreen'
 import { ISO_IMAGE_ASPECT_RATIO } from '../lib/isoUnits'
 import HotspotMarker from './HotspotMarker'
 import HotspotTagger, { hotspotDraftKey } from './HotspotTagger'
 import PanoramaModal from './PanoramaModal'
 
 const DRAG_SENSITIVITY = 5 // px of drag per frame step (touch fallback)
-const LERP_FACTOR = 0.15 // hover-pan smoothing
-const LERP_EPSILON = 0.05
 
 function loadInitialRooms(unit) {
+  // The draft is the tagger's working state and the tagger is dev-only, so a
+  // stale one left in a visitor's localStorage would quietly stand in for the
+  // committed positions with nothing in the running app to say so.
+  if (!import.meta.env.DEV) return unit.hotspotData.rooms
   try {
     const draft = localStorage.getItem(hotspotDraftKey(unit.id))
     if (draft) {
@@ -35,7 +37,9 @@ function loadInitialRooms(unit) {
  * parallax feel), drag-to-pan fallback on touch. This is a bounded pan (not
  * a 360 loop), so all frame math clamps instead of wrapping. Room hotspots
  * track their tagged position across frames and open a panorama modal on
- * click. Shared by the standalone dev viewer (InteriorViewer) and the
+ * click — see useIsoPan for the parking and re-anchoring that keep a marker
+ * still enough to actually press. Shared by the standalone dev viewer
+ * (InteriorViewer) and the
  * compare-flow walkthrough modal — mount with `key={unit.id}` so switching
  * units gets a clean remount rather than carrying over stale frame/room state.
  */
@@ -48,122 +52,48 @@ export default function IsoFrameStage({ unit, enableTagging = false }) {
     [unit],
   )
 
-  const { ready, progress } = useFramePreloader(FRAME_COUNT, frameUrl)
+  const { framesRef, ready, loadedCount, progress } = useFramePreloader(FRAME_COUNT, frameUrl)
 
-  const [frameIndex, setFrameIndex] = useState(0)
   const [rooms, setRooms] = useState(() => loadInitialRooms(unit))
   const [taggingActive, setTaggingActive] = useState(false)
   const [activeRoom, setActiveRoom] = useState(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [supportsHover, setSupportsHover] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
-      : true,
-  )
 
   const containerRef = useRef(null)
-  const frameIndexRef = useRef(0)
-  const lerpRef = useRef({ display: 0, target: 0, rafId: null })
-  const dragStateRef = useRef({ dragging: false, startX: 0, startFrame: 0 })
+  const canvasRef = useRef(null)
+  const drawnRef = useRef(-1)
 
-  useEffect(() => {
-    frameIndexRef.current = frameIndex
-  }, [frameIndex])
-
-  useEffect(() => {
-    const mql = window.matchMedia('(hover: hover) and (pointer: fine)')
-    const handleChange = (e) => setSupportsHover(e.matches)
-    mql.addEventListener('change', handleChange)
-    return () => mql.removeEventListener('change', handleChange)
-  }, [])
-
-  useEffect(() => {
-    const lerpState = lerpRef.current
-    return () => {
-      if (lerpState.rafId != null) cancelAnimationFrame(lerpState.rafId)
-    }
-  }, [])
-
-  const tickLerpRef = useRef(() => {})
-
-  const tickLerp = useCallback(() => {
-    const state = lerpRef.current
-    state.display += (state.target - state.display) * LERP_FACTOR
-    const rounded = Math.round(state.display)
-    setFrameIndex((prev) => (prev !== rounded ? rounded : prev))
-
-    if (Math.abs(state.target - state.display) > LERP_EPSILON) {
-      state.rafId = requestAnimationFrame(() => tickLerpRef.current())
-    } else {
-      state.display = state.target
-      state.rafId = null
-    }
-  }, [])
-
-  useLayoutEffect(() => {
-    tickLerpRef.current = tickLerp
+  // Pointer → frame. The pan parks while the pointer is over a marker and
+  // eases control back rather than snapping when the cursor takes over
+  // somewhere new — without those two, reaching for a hotspot re-renders the
+  // apartment under your cursor and the marker walks away from its room.
+  const { frameIndex, setFrame, isDragging, supportsHover } = useIsoPan({
+    elRef: containerRef,
+    frameCount: FRAME_COUNT,
+    enabled: ready && !taggingActive,
+    dragSensitivity: DRAG_SENSITIVITY,
   })
 
-  const handleHoverMove = useCallback(
-    (event) => {
-      if (!containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
-      const relX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
-      lerpRef.current.target = relX * (FRAME_COUNT - 1)
+  // Paint the frame ourselves rather than swapping an <img src>. A src swap is
+  // asynchronous: the browser holds the previous frame on screen until the new
+  // one is decoded, so a pan across a cold sequence drifts visibly behind the
+  // cursor. drawImage decodes on the spot, in this tick, from an image we are
+  // holding — the picture can never fall out of step with the hotspots again.
+  // Before paint (layout effect) so a frame lands in the same frame it is set.
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current
+    const img = framesRef.current[frameIndex]
+    if (!canvas || !img?.complete || !img.naturalWidth) return
+    if (drawnRef.current === frameIndex) return
 
-      if (lerpRef.current.rafId == null) {
-        lerpRef.current.display = frameIndexRef.current
-        lerpRef.current.rafId = requestAnimationFrame(() => tickLerpRef.current())
-      }
-    },
-    [FRAME_COUNT],
-  )
-
-  const isHoverEvent = useCallback(
-    (event) => supportsHover && event.pointerType !== 'touch',
-    [supportsHover],
-  )
-
-  const handlePointerDown = useCallback(
-    (event) => {
-      if (!ready || taggingActive || isHoverEvent(event)) return
-      dragStateRef.current = {
-        dragging: true,
-        startX: event.clientX,
-        startFrame: frameIndexRef.current,
-      }
-      setIsDragging(true)
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId)
-      } catch {
-        // Capture is best-effort; safe to ignore if unsupported.
-      }
-    },
-    [ready, taggingActive, isHoverEvent],
-  )
-
-  const handlePointerMove = useCallback(
-    (event) => {
-      if (!ready || taggingActive) return
-
-      if (isHoverEvent(event)) {
-        handleHoverMove(event)
-        return
-      }
-
-      if (!dragStateRef.current.dragging) return
-      const deltaX = event.clientX - dragStateRef.current.startX
-      const steps = Math.trunc(deltaX / DRAG_SENSITIVITY)
-      const next = Math.min(FRAME_COUNT - 1, Math.max(0, dragStateRef.current.startFrame - steps))
-      setFrameIndex(next)
-    },
-    [ready, taggingActive, isHoverEvent, handleHoverMove, FRAME_COUNT],
-  )
-
-  const endDrag = useCallback(() => {
-    dragStateRef.current.dragging = false
-    setIsDragging(false)
-  }, [])
+    if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+    }
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+    drawnRef.current = frameIndex
+    // `loadedCount` is the signal that a frame we could not draw yet has since
+    // arrived — first of all frame 0, under the loading bar.
+  }, [framesRef, frameIndex, loadedCount])
 
   const hotspotPositions = useMemo(
     () =>
@@ -188,17 +118,15 @@ export default function IsoFrameStage({ unit, enableTagging = false }) {
         ref={containerRef}
         className="relative select-none overflow-hidden touch-none w-full max-w-6xl rounded-xl border border-neutral-700 shadow-2xl bg-neutral-900"
         style={{ aspectRatio: ISO_IMAGE_ASPECT_RATIO, cursor: cursorStyle }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onPointerLeave={endDrag}
       >
-        <img
-          src={frameUrl(frameIndex)}
-          alt={`${unit.label} apartment isometric interior view`}
-          draggable={false}
-          className="w-full h-full object-cover pointer-events-none"
+        {/* object-contain, not cover: hotspots are placed as a fraction of
+            this box, so the picture must never be cropped out from under
+            them if the box ever resolves off the frames' aspect ratio. */}
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label={`${unit.label} apartment isometric interior view`}
+          className="block w-full h-full object-contain pointer-events-none"
         />
 
         {ready &&
@@ -211,10 +139,9 @@ export default function IsoFrameStage({ unit, enableTagging = false }) {
                 label={room.label}
                 onClick={() => {
                   if (taggingActive) return
-                  // Must fire synchronously inside the click to count as a
-                  // user gesture — the modal (and its own fullscreen button)
-                  // doesn't exist yet, so this targets the whole document.
-                  requestFullscreen(document.documentElement)
+                  // No fullscreen request here: the document is already in it
+                  // (the entry gate takes it, FullscreenGuard keeps it), and
+                  // moving it onto another element only risks handing it back.
                   setActiveRoom(room)
                 }}
               />
@@ -241,7 +168,7 @@ export default function IsoFrameStage({ unit, enableTagging = false }) {
             rooms={rooms}
             onRoomsChange={setRooms}
             frameIndex={frameIndex}
-            onFrameChange={setFrameIndex}
+            onFrameChange={setFrame}
             frameCount={FRAME_COUNT}
             overlayTargetRef={containerRef}
             draftKey={hotspotDraftKey(unit.id)}

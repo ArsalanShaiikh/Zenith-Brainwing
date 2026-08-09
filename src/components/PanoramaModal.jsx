@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { exitFullscreen, fullscreenSupported, isFullscreenActive, requestFullscreen } from '../lib/fullscreen'
 import { roomLinkHotspots, roomScene } from '../lib/roomPanos'
 import Pano from './Pano'
 
@@ -101,10 +100,14 @@ function PanoTagger({ candidates, active, onToggle, captured, targetId, onTarget
  * room's, via `onNavigate`, without backing out to the iso image first.
  * Which rooms actually get a dot is explicit — see `room.links` and the
  * dev-only tagger below, not an automatic full mesh.
+ *
+ * Nothing here touches the fullscreen API. The visit is already full screen and
+ * stays that way (entry gate, then FullscreenGuard); this overlay is a fixed
+ * sheet over the whole viewport either way. Handing full screen back on close —
+ * which this used to do — only dropped the visitor onto the guard's "return to
+ * full screen" sheet on the way out of a 360.
  */
 export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, onClose }) {
-  const [isFullscreen, setIsFullscreen] = useState(isFullscreenActive)
-
   const scene = useMemo(
     () => (room ? roomScene(unitId, room.panorama) : null),
     [unitId, room],
@@ -152,35 +155,6 @@ export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, on
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  // Tracks the real fullscreen state, not just clicks on the button — it also
-  // catches the browser's own Escape-to-exit and any F11 outside our control,
-  // plus the request fired from the hotspot click that opened this modal.
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(isFullscreenActive())
-    document.addEventListener('fullscreenchange', onChange)
-    document.addEventListener('webkitfullscreenchange', onChange)
-    return () => {
-      document.removeEventListener('fullscreenchange', onChange)
-      document.removeEventListener('webkitfullscreenchange', onChange)
-    }
-  }, [])
-
-  // Leaving the panorama — by any route — must not strand the browser in
-  // fullscreen once the modal is gone.
-  useEffect(() => {
-    return () => {
-      if (isFullscreenActive()) exitFullscreen()
-    }
-  }, [])
-
-  const toggleFullscreen = () => {
-    if (isFullscreenActive()) {
-      exitFullscreen()
-    } else {
-      requestFullscreen(document.documentElement)
-    }
-  }
-
   if (!room) return null
 
   return (
@@ -188,24 +162,8 @@ export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, on
       <div className="flex items-center justify-between px-5 py-3 text-white">
         <h2 className="text-lg font-medium">{room.label}</h2>
         <div className="flex items-center gap-2">
-          {fullscreenSupported() && (
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              aria-pressed={isFullscreen}
-              aria-label={isFullscreen ? 'Exit full screen' : 'View full screen'}
-              title={isFullscreen ? 'Exit full screen' : 'View full screen'}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[1.6]">
-                {isFullscreen ? (
-                  <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
-                ) : (
-                  <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-                )}
-              </svg>
-            </button>
-          )}
+          {/* No fullscreen toggle: the only thing it could do from here is take
+              the visit *out* of the screen it is composed for. */}
           <button
             type="button"
             onClick={onClose}

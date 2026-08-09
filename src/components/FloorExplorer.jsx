@@ -289,11 +289,22 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
           // flex-none while stacked: the elevation frame is portrait now, so a
           // flex-sized section would clip it and let it spill over the plan
           // below. Auto height + the root's scroll is the honest stack.
-          'perspective-[1600px] relative flex min-h-0 flex-none flex-col px-4 pt-14 pb-5',
-          'sm:px-6 md:h-full md:border-r md:border-ink/12 md:px-5 md:py-8',
+          'perspective-[1600px] relative flex min-h-0 flex-none flex-col px-4 pb-5',
+          'sm:px-6 md:h-full md:border-r md:border-ink/12 md:px-5 md:pb-8',
           'lg:px-6 xl:px-8',
-          // The elevation floats centred; the filter panel fills the column.
-          mode === 'search' ? 'justify-start' : 'justify-center',
+          // The top pad is the back button's clearance, not decoration: the
+          // button floats over this column's own top-left corner, so anything
+          // less and the mode toggle runs underneath it. Paired with the
+          // button's offsets at the foot of this file — they move together.
+          'pt-16 3xl:pt-18',
+          // Always top-aligned, in both modes. Centring the column in visual
+          // mode centred the *toggle* along with it, so the two labels jumped
+          // up and down the page as you switched between them — the one
+          // control on this screen that has to hold still, because it is the
+          // thing you are clicking. The elevation gets its centring back below
+          // via auto margins, which take the free space under the toggle
+          // rather than the whole column's.
+          'justify-start',
         ].join(' ')}
       >
         <div
@@ -302,13 +313,20 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
             // flex-1 alone — pairing it with h-full made the panel 100% of the
             // column *plus* the toggle above it, so the results list ran off
             // the bottom edge instead of scrolling inside itself.
-            mode === 'search' ? 'min-h-0 flex-1' : '',
+            // Visual mode needs the same full height from md up, or there is
+            // no free space for the elevation's auto margins to centre it in.
+            // Below md the column is auto-height and scrolls, so neither mode
+            // has space to distribute and both already sit at the top.
+            mode === 'search' ? 'min-h-0 flex-1' : 'md:min-h-0 md:flex-1',
           ].join(' ')}
         >
           {/* Two ways in. A segmented control rather than a pill pair — the
               column is too narrow for the labels to sit inline at their old
-              size, so the two halves split the width evenly instead. */}
-          <div className="grid w-full max-w-72 shrink-0 grid-cols-2 gap-0.5 rounded-full border border-ink/12 bg-ink/4 p-0.5 md:max-w-none">
+              size, so the two halves split the width evenly instead. Centred
+              in the column: capped narrower than the column at every size
+              below md, and flush-left it read as pushed aside by the back
+              button rather than placed. */}
+          <div className="mx-auto grid w-full max-w-72 shrink-0 grid-cols-2 gap-0.5 rounded-full border border-ink/12 bg-ink/4 p-0.5 md:max-w-none">
             {[
               ['visual', 'Visual selection'],
               ['search', 'Search by unit'],
@@ -331,7 +349,12 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
 
           {mode === 'visual' ? (
             <>
-              <p className="t-label flex items-center gap-2 text-ink-3 before:h-px before:w-3.5 before:bg-brass before:content-['']">
+              {/* mt-auto here and mb-auto on the hint at the foot of this
+                  branch are a pair: two auto margins on the same axis split
+                  the leftover space evenly, so everything between them rides
+                  centred in whatever is left under the toggle — and the
+                  toggle itself never moves. */}
+              <p className="t-label flex items-center gap-2 text-ink-3 before:h-px before:w-3.5 before:bg-brass before:content-[''] md:mt-auto">
                 {side.label}
               </p>
 
@@ -439,7 +462,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
                 </button>
               </div>
 
-              <p className="t-label shrink-0 text-center text-ink-3">
+              <p className="t-label shrink-0 text-center text-ink-3 md:mb-auto">
                 {plan.key === 'typical'
                   ? 'Hover a floor, click to open — then click a residence on the plan'
                   : 'Hover a floor, click to open'}
@@ -667,20 +690,23 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
         )}
       </section>
 
-      {/* Back to the orbit. */}
+      {/* Back to the orbit. One inset at every size rather than four that
+          disagreed — the left column reserves this button's height as its top
+          pad, and that clearance can only be a single number if the button
+          itself is in one place. Deepest box: 3xl at 16 + 44 = 60px, which is
+          what the column's pt-18 there covers. */}
       <button
         type="button"
         onClick={onClose}
         aria-label="Back"
         className={[
-          'absolute left-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full',
+          'absolute left-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full',
           // Flat on the cream field — glass-surface's brightness lift has no
           // dark backdrop left to work against here.
           'border border-ink/15 bg-paper text-ink',
           'transition-colors duration-200 hover:bg-ink hover:text-paper',
           'touch:h-11 touch:w-11',
-          'sm:left-2.5 sm:top-2.5 md:left-5 md:top-5 md:h-10 md:w-10',
-          'lg:left-3 lg:top-3 3xl:left-4 3xl:top-4 3xl:h-11 3xl:w-11',
+          'md:h-10 md:w-10 3xl:left-4 3xl:top-4 3xl:h-11 3xl:w-11',
         ].join(' ')}
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
