@@ -3,7 +3,7 @@ import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sq
 import { ISO_UNITS } from '../lib/isoUnits'
 
 const CubeIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5] lg:h-3 lg:w-3">
     <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
     <path d="M12 3v9M4 7.5l8 4.5M20 7.5l-8 4.5" />
   </svg>
@@ -20,9 +20,9 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
   const { state, set, toggle, reset, results, dirty, compare, toggleCompare, clearCompare } = filters
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+    <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-2.5 overscroll-contain lg:gap-1.5 md:overflow-y-auto">
       {/* ---------- Facets ---------- */}
-      <div className="shrink-0 rounded-xl border border-ink/10 bg-ink/3 p-2.5 md:p-3">
+      <div className="shrink-0 rounded-xl border border-ink/10 bg-ink/3 p-2.5 md:p-3 lg:p-2">
         {/* Count and sort stack rather than sit inline — the column is too
             narrow to hold both on one line below xl. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
@@ -60,7 +60,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
           type="button"
           onClick={reset}
           disabled={!dirty}
-          className="group mt-3 flex items-center gap-2 text-[11px] text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-35"
+          className="group mt-3 flex items-center gap-2 text-[11px] text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-35 lg:mt-1.5 lg:text-[9px]"
         >
           <span className="inline-block h-px w-4 bg-current transition-all duration-300 group-hover:w-7" />
           Reset filters
@@ -68,7 +68,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
       </div>
 
       {/* ---------- Compare ---------- */}
-      <div className="shrink-0 rounded-xl border border-brass/35 bg-brass/6 p-2.5 md:p-3">
+      <div className="shrink-0 rounded-xl border border-brass/35 bg-brass/6 p-2.5 md:p-3 lg:p-2">
         <div className="flex items-center justify-between gap-2">
           <p className="t-label text-ink-2">
             Compare <span className="text-brass-ink">({compare.length}/3)</span>
@@ -77,7 +77,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
             <button
               type="button"
               onClick={clearCompare}
-              className="text-[10px] text-ink-3 underline underline-offset-4 hover:text-ink"
+              className="text-[10px] text-ink-3 underline underline-offset-4 hover:text-ink lg:text-[9px]"
             >
               Clear
             </button>
@@ -85,7 +85,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
         </div>
 
         {compare.length === 0 ? (
-          <p className="mt-1.5 text-[11px] text-ink-3">Select up to 3 residences to compare.</p>
+          <p className="mt-1.5 text-[11px] text-ink-3 lg:text-[10px]">Select up to 3 residences to compare.</p>
         ) : (
           <>
             <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -97,7 +97,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
                     <button
                       type="button"
                       onClick={() => toggleCompare(key)}
-                      className="flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-2.5 py-1 text-[10.5px] text-ink-2 transition-colors duration-200 hover:border-ink/35 hover:text-ink"
+                      className="flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-2.5 py-1 text-[10.5px] text-ink-2 transition-colors duration-200 hover:border-ink/35 hover:text-ink lg:px-2 lg:py-0.5 lg:text-[10px]"
                     >
                       <span className="max-w-24 truncate">{p.name}</span>
                       <span aria-hidden="true">×</span>
@@ -110,27 +110,26 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
               type="button"
               onClick={onCompare}
               disabled={compare.length < 2}
-              className="mt-2.5 w-full rounded-full bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink disabled:pointer-events-none disabled:opacity-35"
+              className="mt-2.5 w-full rounded-full bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink disabled:pointer-events-none disabled:opacity-35 lg:py-1.5"
             >
               Compare now
             </button>
           </>
         )}
 
-        <div className="mt-3 border-t border-ink/10 pt-2.5">
+        <div className="mt-3 border-t border-ink/10 pt-2.5 lg:mt-1.5 lg:pt-1.5">
           <p className="t-label flex items-center gap-1.5 text-ink-3">
             <CubeIcon />
             View 3D interiors
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:gap-2.5 lg:mt-1 lg:gap-1.5">
             {ISO_UNITS.map((u) => (
               <button
                 key={u.id}
                 type="button"
                 onClick={() => onIsoView?.(u.id)}
                 aria-label={`View ${u.label} interiors in 3D`}
-                className="group relative min-w-0 overflow-hidden rounded-lg border border-ink/12 bg-neutral-900 transition-transform duration-200 hover:-translate-y-0.5"
-                style={{ aspectRatio: '4 / 3' }}
+                className="group relative aspect-[4/3] min-w-0 overflow-hidden rounded-lg border border-ink/12 bg-neutral-900 transition-transform duration-200 hover:-translate-y-0.5 touch:min-h-11 lg:aspect-[2/1]"
               >
                 <img
                   src={`${u.basePath}/${u.framePrefix}${String(0).padStart(u.padLength, '0')}${u.extension}`}
@@ -139,7 +138,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
                   draggable={false}
                 />
                 <span className="absolute inset-0 bg-gradient-to-t from-void/80 via-void/10 to-transparent" />
-                <span className="absolute inset-x-0 bottom-0 truncate p-1.5 text-[11px] leading-none text-paper">
+                <span className="absolute inset-x-0 bottom-0 truncate p-1.5 text-[11px] leading-none text-paper sm:text-[12px] lg:p-1 lg:text-[9px]">
                   {u.label}
                 </span>
               </button>
@@ -152,7 +151,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
       <button
         type="button"
         onClick={() => onEnquire?.()}
-        className="mt-auto inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink"
+        className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink lg:px-3.5 lg:py-2 lg:text-[9px] lg:tracking-[0.12em]"
       >
         Enquire about a residence
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
@@ -164,9 +163,9 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
 }
 
 const Facet = ({ label, children }) => (
-  <div className="mt-2.5 border-t border-ink/10 pt-2.5">
-    <p className="t-label mb-2 text-ink-3">{label}</p>
-    <div className="flex flex-wrap gap-1.5">{children}</div>
+  <div className="mt-2.5 border-t border-ink/10 pt-2.5 lg:mt-1.5 lg:pt-1.5">
+    <p className="t-label mb-2 text-ink-3 lg:mb-1">{label}</p>
+    <div className="flex flex-wrap gap-1.5 lg:gap-1">{children}</div>
   </div>
 )
 
@@ -176,7 +175,7 @@ const Chip = ({ on, onClick, children }) => (
     onClick={onClick}
     aria-pressed={on}
     className={[
-      'rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.12em] transition-colors duration-200',
+      'rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.12em] transition-colors duration-200 lg:px-1.5 lg:py-0.5 lg:text-[9px] lg:tracking-[0.08em]',
       on
         ? 'border-ink bg-ink text-paper'
         : 'border-ink/15 text-ink-2 hover:border-ink/40 hover:text-ink',
@@ -199,12 +198,12 @@ const AreaRange = ({ value, onChange }) => {
 
   return (
     <div className="w-full">
-      <div className="flex items-baseline justify-between gap-2 text-[12px] tabular-nums text-ink-2">
+      <div className="flex items-baseline justify-between gap-2 text-[12px] tabular-nums text-ink-2 lg:text-[11px]">
         <span>{sqft(lo)}</span>
         <span className="truncate text-[9px] uppercase tracking-[0.16em] text-ink-3">sq.ft</span>
         <span>{sqft(hi)}</span>
       </div>
-      <div className="relative mt-1.5 flex h-5 items-center">
+      <div className="relative mt-1.5 flex h-5 items-center lg:h-4">
         <div className="absolute inset-x-0 h-px bg-ink/15" />
         <div
           className="absolute h-px bg-brass"
@@ -264,7 +263,7 @@ const SortMenu = ({ value, onChange }) => {
         aria-haspopup="listbox"
         aria-expanded={open}
         className={[
-          'flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] transition-colors duration-200',
+          'flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] transition-colors duration-200 lg:px-2 lg:py-1 lg:text-[10px]',
           open ? 'border-brass/70 text-ink' : 'border-ink/15 text-ink-2 hover:text-ink',
         ].join(' ')}
       >

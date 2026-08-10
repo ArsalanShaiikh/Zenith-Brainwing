@@ -78,14 +78,14 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
           immersive ? 'h-full max-w-none rounded-none' : 'h-[92vh] max-w-[1600px]'
         }`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-ink/12 p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4 border-b border-ink/12 p-4 sm:p-5 lg:p-6">
           <div className="flex items-center gap-3">
             {unit && (
               <button
                 type="button"
                 onClick={() => setUnitId(null)}
                 aria-label="Back to configuration picker"
-                className="flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[9px] uppercase tracking-[0.14em] text-ink-2 transition-colors duration-200 hover:text-ink"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[9px] uppercase tracking-[0.14em] text-ink-2 transition-colors duration-200 hover:text-ink touch:px-3.5 touch:py-2"
               >
                 <BackIcon />
                 Back
@@ -93,7 +93,7 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
             )}
             <div className="min-w-0">
               <p className="t-label text-ink-3">Interior walkthrough</p>
-              <h3 className="mt-1 truncate font-fine text-[20px] leading-tight text-ink sm:text-[24px]">
+              <h3 className="mt-1 truncate font-fine text-[20px] leading-tight text-ink sm:text-[24px] lg:text-[28px]">
                 {unit ? unit.label : 'Choose a configuration'}
               </h3>
             </div>
@@ -102,7 +102,7 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
             type="button"
             onClick={onClose}
             aria-label="Close walkthrough"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-ink/15 text-ink transition-colors duration-200 hover:bg-ink hover:text-paper"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-ink/15 text-ink transition-colors duration-200 hover:bg-ink hover:text-paper touch:h-11 touch:w-11 lg:h-9 lg:w-9"
           >
             <CloseIcon />
           </button>
@@ -117,7 +117,7 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
           {unit ? (
             <IsoFrameStage key={unit.id} unit={unit} fill />
           ) : (
-            <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2 lg:max-w-4xl lg:gap-6 xl:max-w-5xl">
               {ISO_UNITS.map((u) => (
                 <button
                   key={u.id}
@@ -133,8 +133,8 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
                     draggable={false}
                   />
                   <span className="absolute inset-0 bg-gradient-to-t from-void/80 via-void/10 to-transparent" />
-                  <span className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-4">
-                    <span className="font-fine text-[22px] leading-none text-paper sm:text-[26px]">
+                  <span className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-4 lg:p-5">
+                    <span className="font-fine text-[22px] leading-none text-paper sm:text-[26px] lg:text-[30px]">
                       {u.label}
                     </span>
                     <span className="t-label rounded-full border border-paper/30 px-3 py-1.5 text-paper/90 transition-colors duration-200 group-hover:border-paper/60">
