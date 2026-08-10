@@ -8,19 +8,27 @@ import { createPortal } from 'react-dom'
  * kiosk's behalf. From there, sharing it on to WhatsApp or Mail is a native
  * share sheet on a device that's actually signed into those apps, which the
  * kiosk tablet isn't.
+ *
+ * Driven by an explicit `status` rather than by "is there a url yet", because
+ * on a kiosk the failure states are the ones that matter. The panel opens the
+ * moment it is asked for and says what it is doing: building, ready, or a
+ * reason it could not. Silence in front of a visitor reads as a dead button,
+ * and a dead button is what they report — never the thing that actually broke.
  */
-const ShareQr = ({ url, onClose }) => {
+const ShareQr = ({ status = 'idle', url, message, onRetry, onClose }) => {
   const [qrSrc, setQrSrc] = useState(null)
-  const [failed, setFailed] = useState(false)
+  const [encodeFailed, setEncodeFailed] = useState(false)
   const [prevUrl, setPrevUrl] = useState(url)
 
   // A new url clears the previous code before the effect below builds the
   // next one. Adjusted during render, not in the effect: an effect would let
-  // the previous QR code hang on screen for a frame before clearing it.
+  // the previous QR code hang on screen for a frame before clearing it — and
+  // one visitor's sheet showing under another visitor's heading, however
+  // briefly, is the one mistake this panel must never make.
   if (prevUrl !== url) {
     setPrevUrl(url)
     setQrSrc(null)
-    setFailed(false)
+    setEncodeFailed(false)
   }
 
   useEffect(() => {
@@ -39,14 +47,28 @@ const ShareQr = ({ url, onClose }) => {
       })
       .catch((err) => {
         console.error('Could not build the QR code', err)
-        if (!cancelled) setFailed(true)
+        if (!cancelled) setEncodeFailed(true)
       })
     return () => {
       cancelled = true
     }
   }, [url])
 
-  if (!url) return null
+  // Escape closes, same as the backdrop. A kiosk visitor won't press it, but
+  // whoever is demoing on a laptop will.
+  useEffect(() => {
+    if (status === 'idle') return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose?.()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [status, onClose])
+
+  if (status === 'idle') return null
+
+  const failed = status === 'error' || encodeFailed
+  const waiting = !failed && (status === 'building' || !qrSrc)
 
   return createPortal(
     <div
@@ -61,18 +83,26 @@ const ShareQr = ({ url, onClose }) => {
         className="card m-0 flex w-full max-w-[340px] flex-col items-center gap-4 p-6 text-center"
       >
         <div>
-          <h3 className="font-fine text-[20px] leading-tight text-ink">Scan to get your sheet</h3>
+          <h3 className="font-fine text-[20px] leading-tight text-ink">
+            {failed ? 'Could not build your code' : 'Scan to get your sheet'}
+          </h3>
           <p className="mt-1.5 text-[12px] leading-relaxed text-ink-3">
-            Point your phone&rsquo;s camera at the code — your selection opens right on your
-            device, ready to save or share.
+            {failed
+              ? 'Your selection is safe — only the code failed. Try again, or download the sheet instead.'
+              : 'Point your phone’s camera at the code — your selection opens right on your device, ready to save or share.'}
           </p>
         </div>
 
-        <div className="grid aspect-square w-full max-w-[220px] place-items-center overflow-hidden rounded-lg bg-paper-2 p-3">
-          {qrSrc ? (
+        <div
+          aria-live="polite"
+          className="grid aspect-square w-full max-w-[220px] place-items-center overflow-hidden rounded-lg bg-paper-2 p-3"
+        >
+          {failed ? (
+            <p className="px-2 text-[11px] leading-relaxed text-ink-3">
+              {message || 'Something went wrong building the code.'}
+            </p>
+          ) : qrSrc ? (
             <img src={qrSrc} alt="QR code for your selection sheet" className="h-full w-full" />
-          ) : failed ? (
-            <p className="px-2 text-[11px] text-ink-3">Could not build the code — close and try again.</p>
           ) : (
             <span
               aria-hidden="true"
@@ -81,13 +111,24 @@ const ShareQr = ({ url, onClose }) => {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="t-label rounded-full border border-ink/15 px-4 py-2 text-ink-2 transition-colors duration-200 hover:bg-ink hover:text-paper"
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-2">
+          {failed && onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="t-label rounded-full bg-ink px-4 py-2 text-paper transition-colors duration-200 hover:bg-brass-ink"
+            >
+              Try again
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="t-label rounded-full border border-ink/15 px-4 py-2 text-ink-2 transition-colors duration-200 hover:bg-ink hover:text-paper"
+          >
+            {waiting ? 'Cancel' : 'Close'}
+          </button>
+        </div>
       </div>
     </div>,
     document.body,

@@ -19,6 +19,29 @@ const COPY = {
   error: 'Sheet failed — retry',
 }
 
+/** Nothing asked for, nothing on screen. */
+const QR_IDLE = { status: 'idle', url: null, message: '' }
+
+/**
+ * A sentence the person standing at the kiosk can act on, from an error only
+ * a developer can read. Whoever is on the floor when this fails is a sales
+ * host, not an engineer — "could not reach the sheet host" tells them to call
+ * someone; a raw stack tells them nothing. The original error still goes to
+ * the console for whoever does come looking.
+ */
+const qrFailureMessage = (err) => {
+  const raw = String(err?.message ?? err ?? '')
+  if (/\/api\/upload/.test(raw)) {
+    return /→\s*(4\d\d)/.test(raw)
+      ? 'The sheet was rejected by the host. Please tell the team.'
+      : 'Could not reach the service that hosts your sheet. Check the connection and try again.'
+  }
+  if (/fetch|network|load failed/i.test(raw)) {
+    return 'The connection dropped while preparing your sheet. Try again.'
+  }
+  return 'Your sheet could not be prepared just now. Try again.'
+}
+
 const QrIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
     <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1" />
@@ -42,8 +65,14 @@ const DownloadSelection = () => {
   const rootRef = useRef(null)
   const barRef = useRef(null)
   const [state, setState] = useState('idle')
-  const [qrBusy, setQrBusy] = useState(false)
-  const [qrUrl, setQrUrl] = useState(null)
+  // One object, not a busy flag beside a url: the two could disagree, and when
+  // they did the button went dead with nothing on screen to say why.
+  const [qr, setQr] = useState(QR_IDLE)
+  // Every attempt takes a number. A run that finishes after the visitor has
+  // closed the panel — or after they changed their selection and asked again —
+  // finds its number stale and writes nothing. This is what makes a second
+  // code reliable: the slow first build can no longer land on top of it.
+  const qrRunRef = useRef(0)
 
   const empty = savedCount === 0
   const busy = state === 'working'
@@ -95,20 +124,39 @@ const DownloadSelection = () => {
    * those apps. No messaging API, no per-visitor send.
    */
   const onQr = async () => {
-    if (empty || qrBusy) return
-    setQrBusy(true)
+    if (empty) return
+
+    // Deliberately no "already building" guard. That guard is what made this
+    // unreliable: one run that never settled left the button inert for the
+    // rest of the visit. Asking again now simply supersedes the run in flight.
+    const run = qrRunRef.current + 1
+    qrRunRef.current = run
+    // Open on the click, before any awaiting. The sheet takes a moment to
+    // build, and a panel that appears immediately is the difference between
+    // "it's working on it" and "nothing happened".
+    setQr({ status: 'building', url: null, message: '' })
+
     try {
       const { buildPreferenceSheet, sheetFilename } = await import('../lib/preferencePdf')
       const { uploadSheet } = await import('../lib/pdfPickup')
+      // Built from `saved` as it is right now, so a second code always
+      // reflects a changed selection rather than reusing the first sheet.
       const blob = await buildPreferenceSheet({ name, saved })
-      const filename = sheetFilename(name)
-      const url = await uploadSheet(blob, filename)
-      setQrUrl(url)
+      const url = await uploadSheet(blob, sheetFilename(name))
+      if (qrRunRef.current !== run) return
+      setQr({ status: 'ready', url, message: '' })
     } catch (err) {
       console.error('Could not build a QR code for the selection sheet', err)
-    } finally {
-      setQrBusy(false)
+      if (qrRunRef.current !== run) return
+      setQr({ status: 'error', url: null, message: qrFailureMessage(err) })
     }
+  }
+
+  // Closing retires the run in flight along with the panel, so a build that
+  // lands afterwards can't reopen it over whatever the visitor is looking at.
+  const closeQr = () => {
+    qrRunRef.current += 1
+    setQr(QR_IDLE)
   }
 
   return (
@@ -192,17 +240,25 @@ const DownloadSelection = () => {
         <button
           type="button"
           onClick={onQr}
-          disabled={qrBusy}
-          className="mt-1.5 flex w-full items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-left text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-50 md:px-3"
+          className="mt-1.5 flex w-full items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-left text-ink-3 transition-colors duration-200 hover:text-ink md:px-3"
         >
           <QrIcon />
           <span className="text-[10px] uppercase tracking-[0.11em] md:text-[10.5px]">
-            {qrBusy ? 'Building your code…' : 'Scan to get it on your phone'}
+            Scan to get it on your phone
           </span>
         </button>
       )}
 
-      <ShareQr url={qrUrl} onClose={() => setQrUrl(null)} />
+      {/* Not disabled while building, and the label doesn't change: the panel
+          in front of it is already saying so, and a button that disables
+          itself is the one that can get stuck that way. */}
+      <ShareQr
+        status={qr.status}
+        url={qr.url}
+        message={qr.message}
+        onRetry={onQr}
+        onClose={closeQr}
+      />
     </div>
   )
 }
