@@ -43,7 +43,7 @@ function loadInitialRooms(unit) {
  * compare-flow walkthrough modal — mount with `key={unit.id}` so switching
  * units gets a clean remount rather than carrying over stale frame/room state.
  */
-export default function IsoFrameStage({ unit, enableTagging = false }) {
+export default function IsoFrameStage({ unit, enableTagging = false, fill = false }) {
   const FRAME_COUNT = unit.frameCount
 
   const frameUrl = useCallback(
@@ -116,7 +116,20 @@ export default function IsoFrameStage({ unit, enableTagging = false }) {
     <>
       <div
         ref={containerRef}
-        className="relative select-none overflow-hidden touch-none w-full max-w-6xl rounded-xl border border-neutral-700 shadow-2xl bg-neutral-900"
+        className={[
+          'relative select-none overflow-hidden touch-none bg-neutral-900',
+          // Full-bleed in the walkthrough modal: no width cap, no border/
+          // chrome, so the render fills the immersive stage edge to edge.
+          // max-w-full/max-h-full (rather than w-full/h-full) leave both
+          // axes auto, so the aspect-ratio below is what actually sizes the
+          // box — the same "largest box that fits" resolution as
+          // object-fit: contain, just done on the container instead of an
+          // <img>. That matters here because the hotspot markers are placed
+          // as a fraction of *this* box, not of the picture — an explicit
+          // w-full/h-full would let the two drift apart whenever the modal's
+          // own aspect ratio doesn't match the frames'.
+          fill ? 'max-w-full max-h-full' : 'w-full max-w-6xl rounded-xl border border-neutral-700 shadow-2xl',
+        ].join(' ')}
         style={{ aspectRatio: ISO_IMAGE_ASPECT_RATIO, cursor: cursorStyle }}
       >
         {/* object-contain, not cover: hotspots are placed as a fraction of

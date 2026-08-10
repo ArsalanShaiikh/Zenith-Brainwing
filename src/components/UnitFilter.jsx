@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AREA_BOUNDS, FEATURE_FILTERS, PLAN_BY_KEY, PLAN_TYPES, SORT_OPTIONS, sqft } from '../lib/floorplans'
+import { ISO_UNITS } from '../lib/isoUnits'
 
 const CubeIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
@@ -116,14 +117,35 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
           </>
         )}
 
-        <button
-          type="button"
-          onClick={() => onIsoView?.()}
-          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-full border border-ink/15 py-2 text-[10px] uppercase tracking-[0.16em] text-ink-2 transition-colors duration-200 hover:bg-ink hover:text-paper"
-        >
-          <CubeIcon />
-          View 3D interiors
-        </button>
+        <div className="mt-3 border-t border-ink/10 pt-2.5">
+          <p className="t-label flex items-center gap-1.5 text-ink-3">
+            <CubeIcon />
+            View 3D interiors
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {ISO_UNITS.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => onIsoView?.(u.id)}
+                aria-label={`View ${u.label} interiors in 3D`}
+                className="group relative min-w-0 overflow-hidden rounded-lg border border-ink/12 bg-neutral-900 transition-transform duration-200 hover:-translate-y-0.5"
+                style={{ aspectRatio: '4 / 3' }}
+              >
+                <img
+                  src={`${u.basePath}/${u.framePrefix}${String(0).padStart(u.padLength, '0')}${u.extension}`}
+                  alt={`${u.label} isometric preview`}
+                  className="absolute inset-0 h-full w-full object-cover opacity-90 transition-opacity duration-200 group-hover:opacity-100"
+                  draggable={false}
+                />
+                <span className="absolute inset-0 bg-gradient-to-t from-void/80 via-void/10 to-transparent" />
+                <span className="absolute inset-x-0 bottom-0 truncate p-1.5 text-[11px] leading-none text-paper">
+                  {u.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ---------- Enquire ---------- */}

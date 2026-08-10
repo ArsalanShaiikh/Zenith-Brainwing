@@ -30,15 +30,17 @@ const CloseIcon = () => (
  * configuration just takes the overlay edge to edge, in the glass we already
  * hold.
  */
-const IsoWalkthroughModal = ({ open, onClose }) => {
-  const [unitId, setUnitId] = useState(null)
+const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
+  const [unitId, setUnitId] = useState(initialUnitId ?? null)
   // Resets on each reopen — adjusted during render (as PlanZoom does for its
   // own open-state reset) rather than in an effect, since this component
-  // stays mounted across opens/closes.
+  // stays mounted across opens/closes. The sidebar's configuration cards now
+  // pick a unit before this ever opens, so it starts straight on the
+  // walkthrough rather than its own picker screen.
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
-    if (open) setUnitId(null)
+    if (open) setUnitId(initialUnitId ?? null)
   }
 
   useEffect(() => {
@@ -106,9 +108,14 @@ const IsoWalkthroughModal = ({ open, onClose }) => {
           </button>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center overflow-y-auto bg-paper-2 p-4 sm:p-6">
+        <div
+          className={[
+            'relative flex flex-1 items-center justify-center',
+            immersive ? 'overflow-hidden bg-void' : 'overflow-y-auto bg-paper-2 p-4 sm:p-6',
+          ].join(' ')}
+        >
           {unit ? (
-            <IsoFrameStage key={unit.id} unit={unit} />
+            <IsoFrameStage key={unit.id} unit={unit} fill />
           ) : (
             <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
               {ISO_UNITS.map((u) => (
