@@ -13,6 +13,9 @@ import EVENING from '../data_Evening'
  */
 const ROOT = '/panos'
 
+/** The horizontal cube faces, in ring order — front, right, back, left. */
+const FACES = ['f', 'r', 'b', 'l']
+
 /** Scene names are `<metres>_day` / `<metres>_eve`. */
 const metresOf = (scene) => Number.parseInt(scene.name, 10)
 
@@ -46,14 +49,15 @@ const indexByMetres = (data, dir) =>
           id: s.id,
           tileUrl: `${base}/{z}/{f}/{y}/{x}.jpg`,
           previewUrl: `${base}/preview.jpg`,
-          // The front face alone, at the first real tile level (a single
-          // 512×512 tile — level 0 is the `preview.jpg` fallback, a 256×256
-          // cube-map strip meant only to hold the screen until real tiles
-          // arrive, not for standalone display). Anywhere that wants one
-          // ordinary-looking photo of a vantage without opening the pano
-          // itself — a thumbnail, a compare card — wants this over
-          // `previewUrl`.
-          frontUrl: `${base}/1/f/0/0.jpg`,
+          // The four horizontal cube faces alone (front/right/back/left — no
+          // up/down, which are sky and ground, not a "view"), each at the
+          // first real tile level (a single 512×512 tile — level 0 is the
+          // `preview.jpg` fallback, a 256×256 cube-map strip meant only to
+          // hold the screen until real tiles arrive, not for standalone
+          // display). Anywhere that wants one ordinary-looking photo of a
+          // vantage without opening the pano itself — a thumbnail, a compare
+          // card — wants these over `previewUrl`.
+          faceUrls: FACES.map((f) => `${base}/1/${f}/0/0.jpg`),
           levels: s.levels,
           faceSize: s.faceSize,
           initialView: s.initialViewParameters,
