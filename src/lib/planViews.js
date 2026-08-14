@@ -30,8 +30,8 @@
 export const TYPICAL_PLAN_VIEWPOINTS = [
   { id: 'vp-north', label: 'View 01', x: 866, y: 186, yaw: -0.5446, pitch: 0, fov: 1.3979 },
   { id: 'vp-east', label: 'View 02', x: 1360, y: 568, yaw: 1.0262, pitch: 0, fov: 1.3979 },
-  { id: 'vp-south', label: 'View 03', x: 866, y: 952, yaw: 2.597, pitch: 0, fov: 1.3979 },
-  { id: 'vp-west', label: 'View 04', x: 372, y: 568, yaw: -2.1154, pitch: 0, fov: 1.3979 },
+  { id: 'vp-south', label: 'View 05', x: 866, y: 952, yaw: 2.597, pitch: 0, fov: 1.3979 },
+  { id: 'vp-west', label: 'View 06', x: 372, y: 568, yaw: -2.1154, pitch: 0, fov: 1.3979 },
 ]
 
 /** Router state that sends the shell to a mark's pano and knows the way back. */

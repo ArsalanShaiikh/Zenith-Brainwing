@@ -91,15 +91,114 @@ const BackIcon = () => (
  *  (see planViews.js): the tower doesn't have unit-specific renders yet. */
 const RESIDENCE_ORDER = FLOOR_PLANS.filter((p) => p.type !== 'reference')
 
+/** How close two elevations have to be (in metres) before their panos read
+ *  as the same photo to a visitor. Crown/Sky rise/High rise sit only 4–6 m
+ *  apart — same photo, different label — while the rest are ~32 m apart and
+ *  genuinely distinct. Tune this if new pano heights are added. */
+const VANTAGE_DISTINCT_GAP_METRES = 15
+
+/** How many of the lowest elevations stay in the repeat pool regardless of
+ *  clustering — the tower's original "most-used" pair. Near-duplicate
+ *  vantages freed up by clustering join this pool rather than each getting
+ *  their own tiny pool, so repeats still have some variety instead of
+ *  alternating between just two photos. */
+const FORCED_REPEAT_COUNT = 2
+
+/** Groups VANTAGES (already sorted crown-to-base) into runs where each
+ *  consecutive gap is under VANTAGE_DISTINCT_GAP_METRES — i.e. runs that
+ *  read as one photo, not several. */
+const clusterVantages = (vantages, gapThreshold) => {
+  const clusters = []
+  vantages.forEach((v, i) => {
+    if (i === 0 || vantages[i - 1].metres - v.metres >= gapThreshold) {
+      clusters.push([i])
+    } else {
+      clusters[clusters.length - 1].push(i)
+    }
+  })
+  return clusters
+}
+
+/** Splits VANTAGES into a "once" pool (visually distinct, one residence
+ *  each) and a "repeat" pool (near-duplicates plus the forced lowest pair)
+ *  that the rest of the tower cycles through. */
+const groupVantageIndices = () => {
+  const n = VANTAGES.length
+  if (n === 0) return { onceIndices: [], repeatIndices: [] }
+  const clusters = clusterVantages(VANTAGES, VANTAGE_DISTINCT_GAP_METRES)
+  const repeatSet = new Set()
+  clusters.forEach((cluster) => {
+    // Every member past the first (highest) in a close cluster is a
+    // near-duplicate of it, so it joins the repeat pool instead of
+    // pretending to be its own distinct view.
+    cluster.slice(1).forEach((idx) => repeatSet.add(idx))
+  })
+  for (let idx = n - FORCED_REPEAT_COUNT; idx < n; idx++) repeatSet.add(idx)
+  const onceIndices = []
+  for (let idx = 0; idx < n; idx++) {
+    if (!repeatSet.has(idx)) onceIndices.push(idx)
+  }
+  return { onceIndices, repeatIndices: [...repeatSet] }
+}
+
+const { onceIndices: ONCE_INDICES, repeatIndices: REPEAT_INDICES } = groupVantageIndices()
+
+/** Builds the plan→vantage lookup for the full RESIDENCE_ORDER, once, so a
+ *  given plan always resolves to the same vantage everywhere it's shown.
+ *  Each once-pool vantage is assigned to exactly one residence, spread
+ *  evenly across the order; every other residence cycles through the repeat
+ *  pool, so no residence goes without a photo and no two "distinct" slots
+ *  quietly show the same image. */
+const buildVantageSequence = (count) => {
+  if (VANTAGES.length === 0 || count === 0) return []
+  const singleCount = Math.min(ONCE_INDICES.length, count)
+  const seq = new Array(count).fill(null)
+  for (let s = 0; s < singleCount; s++) {
+    const pos = Math.round((s * (count - 1)) / Math.max(singleCount - 1, 1))
+    seq[pos] = ONCE_INDICES[s]
+  }
+  const pool = REPEAT_INDICES.length > 0 ? REPEAT_INDICES : ONCE_INDICES
+  let cursor = 0
+  for (let i = 0; i < count; i++) {
+    if (seq[i] === null) {
+      seq[i] = pool[cursor % pool.length]
+      cursor += 1
+    }
+  }
+  return seq
+}
+
+const VANTAGE_SEQUENCE = buildVantageSequence(RESIDENCE_ORDER.length)
+
 const vantageForPlan = (plan) => {
   const i = RESIDENCE_ORDER.findIndex((p) => p.key === plan.key)
   if (i === -1 || VANTAGES.length === 0) return null
-  const idx = Math.round((i * (VANTAGES.length - 1)) / Math.max(RESIDENCE_ORDER.length - 1, 1))
-  return VANTAGES[idx]
+  return VANTAGES[VANTAGE_SEQUENCE[i]]
+}
+
+/** Same lookup as vantageForPlan, applied to the compared set. A collision
+ *  on a repeat-pool vantage swaps to the next pool member not already
+ *  showing in this compare, so two columns only ever share a photo when the
+ *  whole pool has been exhausted. Once-pool vantages never collide by
+ *  construction. */
+const vantagesForCompare = (plans) => {
+  if (VANTAGES.length === 0) return plans.map(() => null)
+  const used = new Set()
+  return plans.map((p) => {
+    const i = RESIDENCE_ORDER.findIndex((rp) => rp.key === p.key)
+    if (i === -1) return null
+    let idx = VANTAGE_SEQUENCE[i]
+    if (used.has(idx) && REPEAT_INDICES.includes(idx)) {
+      const alt = REPEAT_INDICES.find((r) => !used.has(r))
+      if (alt !== undefined) idx = alt
+    }
+    used.add(idx)
+    return VANTAGES[idx]
+  })
 }
 
 /** A little shorter than the plan preview above it — this is a supporting
- *  glance at the view, not the main thing on the card. `frontUrl` (see
+ *  glance at the view, not the main thing on the card. `faceUrls` (see
  *  lib/panos.js) is a real single tile, not the tiny cube-map preview strip
  *  Marzipano uses to hold the pano's own screen until real tiles arrive, so
  *  it reads as an ordinary sharp photo rather than a blurry placeholder. */
@@ -153,6 +252,7 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
 
   const rootRef = useRef(null)
   const blackoutRef = useRef(null)
+  const compareVantages = vantagesForCompare(plans)
 
   // The floorplan table and the view grid are different DOM shapes, not a
   // height/width the same box could tween between — so the swap between them
@@ -271,8 +371,8 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                   className="mt-4 grid gap-4"
                   style={{ gridTemplateColumns: `repeat(${plans.length}, minmax(0, 1fr))` }}
                 >
-                  {plans.map((p) => {
-                    const vantage = vantageForPlan(p)
+                  {plans.map((p, i) => {
+                    const vantage = compareVantages[i]
                     return (
                       <div key={p.key}>
                         <div
@@ -281,7 +381,7 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                         >
                           {vantage && (
                             <img
-                              src={vantage.scenes.day.frontUrl}
+                              src={vantage.scenes.day.faceUrls[i % vantage.scenes.day.faceUrls.length]}
                               alt={`The view from around ${vantage.metres} m, near ${p.name}`}
                               className="h-full w-full object-cover"
                               loading="lazy"
@@ -392,4 +492,4 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
   )
 }
 
-export default UnitCompare
+export default UnitCompare;
