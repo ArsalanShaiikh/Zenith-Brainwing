@@ -170,13 +170,7 @@ const buildVantageSequence = (count) => {
 
 const VANTAGE_SEQUENCE = buildVantageSequence(RESIDENCE_ORDER.length)
 
-const vantageForPlan = (plan) => {
-  const i = RESIDENCE_ORDER.findIndex((p) => p.key === plan.key)
-  if (i === -1 || VANTAGES.length === 0) return null
-  return VANTAGES[VANTAGE_SEQUENCE[i]]
-}
-
-/** Same lookup as vantageForPlan, applied to the compared set. A collision
+/** Resolves each compared plan to its VANTAGE_SEQUENCE vantage. A collision
  *  on a repeat-pool vantage swaps to the next pool member not already
  *  showing in this compare, so two columns only ever share a photo when the
  *  whole pool has been exhausted. Once-pool vantages never collide by
@@ -492,4 +486,4 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
   )
 }
 
-export default UnitCompare;
+export default UnitCompare
