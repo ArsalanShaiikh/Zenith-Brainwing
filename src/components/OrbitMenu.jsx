@@ -82,9 +82,9 @@ const OrbitMenu = ({ show, onSelect }) => {
           ref={sheetRef}
           className={[
             'glass pointer-events-auto w-full text-ink',
-            'max-w-[400px] px-3.5 py-3 sm:max-w-[420px] sm:px-4 sm:py-3.5',
-            'md:max-w-[440px] md:px-4.5 md:py-4',
-            'lg:w-[clamp(320px,21vw,620px)] lg:max-w-none',
+            'max-w-[440px] px-3.5 py-3 sm:max-w-[460px] sm:px-4 sm:py-3.5',
+            'md:max-w-[500px] md:px-4.5 md:py-4',
+            'lg:w-[clamp(360px,25vw,680px)] lg:max-w-none',
             'lg:px-[clamp(16px,1.1vw,30px)] lg:py-[clamp(13px,0.9vw,24px)]',
             'short:px-3 short:py-2',
           ].join(' ')}
@@ -100,17 +100,17 @@ const OrbitMenu = ({ show, onSelect }) => {
                   data-menu-row={v.id}
                   onClick={() => onSelect(v.id)}
                   className={[
-                    'group relative flex w-full items-center gap-2.5 overflow-hidden',
-                    'border-b border-ink/12 py-2 text-left last:border-b-0 md:gap-3 md:py-2.5',
-                    'lg:gap-[clamp(8px,0.65vw,17px)] lg:py-[clamp(7px,0.52vw,14px)]',
-                    'short:py-1',
+                    'group relative flex w-full items-center gap-2.5 overflow-hidden pl-2.5 pr-2',
+                    'border-b border-ink/12 py-3 text-left last:border-b-0 md:gap-3 md:pl-3 md:pr-2.5 md:py-3.5',
+                    'lg:gap-[clamp(8px,0.65vw,17px)] lg:pl-4 lg:pr-3.5 lg:py-[clamp(11px,0.85vw,22px)]',
+                    'short:py-1.5',
                   ].join(' ')}
                 >
                   {/* Ink wash + brass rule sweeping in from the left edge —
                       the whole hover effect now, no plate behind it. */}
                   <span
                     aria-hidden="true"
-                    className="absolute inset-0 origin-left scale-x-0 bg-ink/8 transition-transform duration-500 ease-zenith group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                    className="absolute inset-x-0.5 inset-y-1 rounded-lg origin-left scale-x-0 bg-ink/8 transition-transform duration-500 ease-zenith group-hover:scale-x-100 group-focus-visible:scale-x-100 md:inset-x-1 md:inset-y-1.5 lg:inset-x-1.5 lg:inset-y-2"
                   />
                   <span
                     aria-hidden="true"

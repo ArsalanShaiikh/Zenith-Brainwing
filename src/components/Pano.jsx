@@ -326,11 +326,6 @@ const Pano = ({
           />
         )}
 
-        {/* Legibility wash under the chrome. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(11_10_8/0.6)_0%,rgb(11_10_8/0.16)_32%,rgb(11_10_8/0)_60%)]"
-        />
       </div>
 
       {/* Loading cover. Opaque until the pano has a frame worth showing, and

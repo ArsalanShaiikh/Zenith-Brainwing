@@ -225,16 +225,16 @@ useEffect(() => {
                       onFocus={() => setHot(i)}
                       onClick={() => exit(v.id)}
                       className={[
-                        'group relative flex w-full items-center gap-3 overflow-hidden',
-                        'border-b border-ink/12 py-3 text-left last:border-b-0 md:gap-4 md:py-3.5',
-                        'lg:gap-[clamp(12px,1vw,26px)] lg:py-[clamp(12px,0.95vw,26px)]',
-                        'short:py-1.5',
+                        'group relative flex w-full items-center gap-3 overflow-hidden pl-1 pr-3',
+                        'border-b border-ink/12 py-5 text-left last:border-b-0 md:gap-4 md:pl-1.5 md:pr-4 md:py-6',
+                        'lg:gap-[clamp(12px,1vw,26px)] lg:pl-2 lg:pr-5 lg:py-[clamp(20px,1.5vw,38px)]',
+                        'short:py-2.5',
                       ].join(' ')}
                     >
                       {/* Brass wash sweeping in from the left edge. */}
                       <span
                         aria-hidden="true"
-                        className="absolute inset-0 origin-left scale-x-0 bg-ink/8 transition-transform duration-500 ease-zenith group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                        className="absolute inset-x-1 inset-y-1 rounded-lg origin-left scale-x-0 bg-ink/8 transition-transform duration-500 ease-zenith group-hover:scale-x-100 group-focus-visible:scale-x-100 md:inset-x-1.5 md:inset-y-1.5 lg:inset-x-2 lg:inset-y-2"
                       />
                       <span
                         aria-hidden="true"
