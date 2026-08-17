@@ -4,6 +4,7 @@ import { GALLERY } from '../lib/gallery'
 import { galleryRecord } from '../lib/saveables'
 import { useVisitor } from '../hooks/useVisitor'
 import LikeButton from '../components/LikeButton'
+import { BRAND_LANE } from '../lib/brandLane'
 
 const N = GALLERY.length
 
@@ -246,7 +247,11 @@ const Gallery = ({ onBack }) => {
       </button>
 
       {/* Title + counter. */}
-      <div className="pointer-events-none absolute bottom-[92px] left-0 z-30 p-4 [text-shadow:0_2px_22px_rgb(0_0_0/0.6)] sm:p-5 md:bottom-[104px] md:p-8 lg:p-10 3xl:bottom-[128px] 3xl:p-14">
+      {/* The right lane is held for the studio credit, which lifts above the
+          rail on this screen (see components/BrandMark.jsx). */}
+      <div
+        className={`pointer-events-none absolute bottom-[92px] left-0 z-30 p-4 [text-shadow:0_2px_22px_rgb(0_0_0/0.6)] sm:p-5 md:bottom-[104px] md:p-8 lg:p-10 3xl:bottom-[128px] 3xl:p-14 ${BRAND_LANE}`}
+      >
         <p className="t-fig text-[11px] tracking-[0.14em] text-paper/70 md:text-[12px]">
           {String(idx + 1).padStart(2, '0')}
           <span className="mx-1.5 text-paper/40">/</span>

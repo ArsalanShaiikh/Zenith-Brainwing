@@ -24,6 +24,7 @@ import {
 import { floorFromRank } from '../lib/floorplans'
 import { useVisitor } from '../hooks/useVisitor'
 import Logo from './Logo'
+import { BRAND_LANE } from '../lib/brandLane'
 import OrbitMenu from './OrbitMenu'
 import FloorExplorer from './FloorExplorer'
 import { viewpointNavState } from '../lib/planViews'
@@ -1201,6 +1202,9 @@ const Landing = ({ onView, onPoint }) => {
             'absolute bottom-4 left-4 sm:bottom-5 sm:left-5 md:bottom-8 md:left-8',
             'lg:bottom-10 lg:left-10 3xl:bottom-14 3xl:left-14',
             '[text-shadow:0_2px_22px_rgb(0_0_0/0.6)]',
+            // Keeps the sub-line clear of the studio credit in the opposite
+            // corner at every width, notch included.
+            BRAND_LANE,
           ].join(' ')}
         >
           <p className="t-label flex items-center gap-2 text-paper/75 before:h-px before:w-3.5 before:bg-brass before:content-['']">

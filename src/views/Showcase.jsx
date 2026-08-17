@@ -5,6 +5,7 @@ import { showcaseFor } from '../lib/showcase'
 import { showcaseRecord } from '../lib/saveables'
 import { useVisitor } from '../hooks/useVisitor'
 import LikeButton from '../components/LikeButton'
+import { BRAND_LANE } from '../lib/brandLane'
 
 /**
  * A point's media, shown full-screen. There's no auto-pan any more: multi-media
@@ -236,8 +237,11 @@ const Showcase = () => {
         </>
       )}
 
-      {/* Title + slide index. */}
-      <div className="pointer-events-none absolute bottom-0 left-0 z-20 p-4 [text-shadow:0_2px_22px_rgb(0_0_0/0.6)] sm:p-5 md:p-8 lg:p-10 3xl:p-14">
+      {/* Title + slide index. The right lane is held for the studio credit in
+          the opposite corner (see components/BrandMark.jsx). */}
+      <div
+        className={`pointer-events-none absolute bottom-0 left-0 z-20 p-4 [text-shadow:0_2px_22px_rgb(0_0_0/0.6)] sm:p-5 md:p-8 lg:p-10 3xl:p-14 ${BRAND_LANE}`}
+      >
         <h1 className="font-fine text-[clamp(30px,6vw,64px)] leading-[0.98] tracking-[-0.02em] text-paper">
           {data.title}
         </h1>
