@@ -24,7 +24,12 @@ export const SHOWCASE = {
     id: 'podium',
     title: 'Podium Amenities',
     sub: 'The amenity deck · Level 05',
-    media: [{ type: 'image', webp: '/showcase/podium/podium.webp', jpg: '/showcase/podium/podium.jpg' }],
+    media: [{ type: 'image', webp: '/showcase/podium/podium.webp', jpg: '/showcase/podium/podium.jpg' },
+            { type: 'image', webp: '/showcase/podium/podium1.webp', jpg: '/showcase/podium/podium1.jpg' },
+            { type: 'image', webp: '/showcase/podium/podium2.webp', jpg: '/showcase/podium/podium2.jpg' },
+            { type: 'image', webp: '/showcase/podium/podium3.webp', jpg: '/showcase/podium/podium3.jpg' },
+            { type: 'image', webp: '/showcase/podium/podium4.webp', jpg: '/showcase/podium/podium4.jpg' }
+    ],
   },
   kids: {
     id: 'kids',
