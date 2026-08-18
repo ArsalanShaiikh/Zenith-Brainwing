@@ -12,13 +12,13 @@ export default function HotspotMarker({ x, y, label, onClick }) {
       <button
         type="button"
         onClick={onClick}
-        className="group relative flex items-center justify-center w-6 h-6 rounded-full bg-white/90 border border-white shadow-lg pointer-events-auto cursor-pointer"
+        className="group relative flex items-center justify-center w-6 h-6 sm:w-6 sm:h-6 touch:w-8 touch:h-8 rounded-full bg-white/90 border border-white shadow-lg pointer-events-auto cursor-pointer"
         aria-label={`View ${label} panorama`}
       >
         <span className="absolute inset-0 rounded-full bg-white/60 animate-ping" />
-        <span className="relative w-2.5 h-2.5 rounded-full bg-neutral-900" />
+        <span className="relative w-2.5 h-2.5 touch:w-3 touch:h-3 rounded-full bg-neutral-900" />
 
-        <span className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900/90 px-2.5 py-1 text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900/90 px-2.5 py-1 text-[11px] sm:text-xs font-medium text-white opacity-0 group-hover:opacity-100 touch:opacity-100 transition-opacity">
           {label}
         </span>
       </button>

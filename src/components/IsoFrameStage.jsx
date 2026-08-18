@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import useFramePreloader from '../hooks/useFramePreloader'
 import useIsoPan from '../hooks/useIsoPan'
 import { getHotspotPosition } from '../hotspots/interpolateHotspot'
@@ -8,6 +8,26 @@ import HotspotTagger, { hotspotDraftKey } from './HotspotTagger'
 import PanoramaModal from './PanoramaModal'
 
 const DRAG_SENSITIVITY = 5 // px of drag per frame step (touch fallback)
+
+/**
+ * Remaps an image-space fraction (0-1) to a container-space fraction under
+ * object-fit: cover — the same crop-and-scale-to-fill the canvas renders
+ * with in immersive mode, so a hotspot still lands on the doorway it was
+ * tagged at instead of drifting once the box stops matching the frames'
+ * aspect ratio.
+ */
+function coverFraction(fx, fy, containerWidth, containerHeight, aspect) {
+  if (!containerWidth || !containerHeight) return { x: fx, y: fy }
+  const scale = Math.max(containerWidth / aspect, containerHeight)
+  const displayedWidth = aspect * scale
+  const displayedHeight = scale
+  const offsetX = (containerWidth - displayedWidth) / 2
+  const offsetY = (containerHeight - displayedHeight) / 2
+  return {
+    x: (offsetX + fx * displayedWidth) / containerWidth,
+    y: (offsetY + fy * displayedHeight) / containerHeight,
+  }
+}
 
 function loadInitialRooms(unit) {
   // The draft is the tagger's working state and the tagger is dev-only, so a
@@ -62,6 +82,22 @@ export default function IsoFrameStage({ unit, enableTagging = false, fill = fals
   const canvasRef = useRef(null)
   const drawnRef = useRef(-1)
 
+  // Only immersive mode fills edge-to-edge with object-cover — that's the
+  // only case where the container's shape can drift from the frames' fixed
+  // aspect ratio, so it's the only one that needs live size to remap hotspots.
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    if (!fill) return undefined
+    const el = containerRef.current
+    if (!el) return undefined
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setContainerSize({ width, height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fill])
+
   // Pointer → frame. The pan parks while the pointer is over a marker and
   // eases control back rather than snapping when the cursor takes over
   // somewhere new — without those two, reaching for a hotspot re-renders the
@@ -97,11 +133,21 @@ export default function IsoFrameStage({ unit, enableTagging = false, fill = fals
 
   const hotspotPositions = useMemo(
     () =>
-      rooms.map((room) => ({
-        room,
-        position: getHotspotPosition(room.keyframes, frameIndex),
-      })),
-    [rooms, frameIndex],
+      rooms.map((room) => {
+        const position = getHotspotPosition(room.keyframes, frameIndex)
+        if (!position || !fill) return { room, position }
+        return {
+          room,
+          position: coverFraction(
+            position.x,
+            position.y,
+            containerSize.width,
+            containerSize.height,
+            ISO_IMAGE_ASPECT_RATIO,
+          ),
+        }
+      }),
+    [rooms, frameIndex, fill, containerSize],
   )
 
   const cursorStyle = taggingActive
@@ -118,28 +164,22 @@ export default function IsoFrameStage({ unit, enableTagging = false, fill = fals
         ref={containerRef}
         className={[
           'relative select-none overflow-hidden touch-none bg-neutral-900',
-          // Full-bleed in the walkthrough modal: no width cap, no border/
-          // chrome, so the render fills the immersive stage edge to edge.
-          // max-w-full/max-h-full (rather than w-full/h-full) leave both
-          // axes auto, so the aspect-ratio below is what actually sizes the
-          // box — the same "largest box that fits" resolution as
-          // object-fit: contain, just done on the container instead of an
-          // <img>. That matters here because the hotspot markers are placed
-          // as a fraction of *this* box, not of the picture — an explicit
-          // w-full/h-full would let the two drift apart whenever the modal's
-          // own aspect ratio doesn't match the frames'.
-          fill ? 'max-w-full max-h-full' : 'w-full max-w-6xl rounded-xl border border-neutral-700 shadow-2xl',
+          // Immersive mode fills the stage edge to edge — no aspect-ratio
+          // lock, so no void-colored letterbox bars on a viewport the
+          // frames' own ratio doesn't match. The canvas below covers this
+          // box (cropping instead of letterboxing) and hotspotPositions
+          // remaps each marker's image-space fraction through the same
+          // cover transform, so markers stay pinned to the picture instead
+          // of the box.
+          fill ? 'w-full h-full' : 'w-full max-w-6xl rounded-xl border border-neutral-700 shadow-2xl',
         ].join(' ')}
-        style={{ aspectRatio: ISO_IMAGE_ASPECT_RATIO, cursor: cursorStyle }}
+        style={fill ? { cursor: cursorStyle } : { aspectRatio: ISO_IMAGE_ASPECT_RATIO, cursor: cursorStyle }}
       >
-        {/* object-contain, not cover: hotspots are placed as a fraction of
-            this box, so the picture must never be cropped out from under
-            them if the box ever resolves off the frames' aspect ratio. */}
         <canvas
           ref={canvasRef}
           role="img"
           aria-label={`${unit.label} apartment isometric interior view`}
-          className="block w-full h-full object-contain pointer-events-none"
+          className={`block w-full h-full pointer-events-none ${fill ? 'object-cover' : 'object-contain'}`}
         />
 
         {ready &&
