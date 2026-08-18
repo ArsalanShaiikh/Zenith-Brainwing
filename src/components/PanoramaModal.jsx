@@ -159,16 +159,16 @@ export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, on
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
-      <div className="flex items-center justify-between px-5 py-3 text-white">
-        <h2 className="text-lg font-medium">{room.label}</h2>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 border-b border-ink/12 bg-paper px-4 py-3 text-ink sm:px-5 lg:px-6">
+        <h2 className="min-w-0 truncate text-base font-medium sm:text-lg lg:text-xl">{room.label}</h2>
+        <div className="flex shrink-0 items-center gap-2">
           {/* No fullscreen toggle: the only thing it could do from here is take
               the visit *out* of the screen it is composed for. */}
           <button
             type="button"
             onClick={onClose}
             aria-label="Close panorama"
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-xl leading-none"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-ink/15 text-ink transition-colors duration-200 hover:bg-ink hover:text-paper touch:h-11 touch:w-11"
           >
             &times;
           </button>
@@ -188,15 +188,15 @@ export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, on
         )}
 
         {status === 'checking' && (
-          <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-white/70">
             Loading panorama&hellip;
           </div>
         )}
 
         {status === 'missing' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70">
-            <span className="text-base font-medium text-white">Panorama coming soon</span>
-            <span className="text-sm">The 360&deg; view for {room.label} hasn&apos;t been added yet.</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-white/70">
+            <span className="text-base font-medium text-white sm:text-lg">Panorama coming soon</span>
+            <span className="text-sm sm:text-base">The 360&deg; view for {room.label} hasn&apos;t been added yet.</span>
           </div>
         )}
 
