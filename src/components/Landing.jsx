@@ -973,7 +973,7 @@ const Landing = ({ onView, onPoint }) => {
 
       if (!hasOverlay) {
         gsap.to(el, { autoAlpha: 0, duration: 0.35, ease: 'power2.out' })
-        gsap.set(plates, { clearProps: 'fillOpacity,fill' })
+        if (plates.length) gsap.set(plates, { clearProps: 'fillOpacity,fill' })
         return
       }
 
