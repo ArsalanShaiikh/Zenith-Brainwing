@@ -6,6 +6,7 @@ import Landing from './components/Landing'
 import Shell from './components/Shell'
 import EntryGate from './components/EntryGate'
 import FullscreenGuard from './components/FullscreenGuard'
+import BrandMark from './components/BrandMark'
 import Showcase from './views/Showcase'
 import Gallery from './views/Gallery'
 import InteriorViewer from './InteriorViewer'
@@ -66,11 +67,15 @@ const AppRoutes = () => {
  *
  * `FullscreenGuard` is the gate's standing order: once full screen has been
  * held, leaving it puts the same paper back until the screen is whole again.
+ *
+ * `BrandMark` is the studio credit in the bottom-right corner. It renders
+ * before the two paper layers so their z-order covers it while either is up.
  */
 const App = () => (
   <VisitorProvider>
     <ViewProvider>
       <AppRoutes />
+      <BrandMark />
       <EntryGate />
       <FullscreenGuard />
     </ViewProvider>

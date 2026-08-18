@@ -371,7 +371,11 @@ const LocationMap = ({ activeId = null, hoveredId = null, onSelect, onHover }) =
       touchPitch
       style={{ width: '100%', height: '100%' }}
     >
-      <AttributionControl compact position="bottom-right" />
+      {/* Bottom-left, not bottom-right: the map runs full-bleed to the plate,
+          and the studio credit owns that far corner (see BrandMark.jsx). From
+          lg up the destination panel is a centred left card, so the corner
+          under it stays clear. */}
+      <AttributionControl compact position="bottom-left" />
 
       {/* The tower. */}
       <Marker longitude={SITE.lng} latitude={SITE.lat} anchor="bottom">
