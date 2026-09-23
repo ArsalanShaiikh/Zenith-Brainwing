@@ -9,6 +9,12 @@ import {
   planForPlateRank,
   sideIndexForFrame,
 } from '../lib/floorplans'
+import {
+  trackFloorPlanView,
+  trackFloorPlanSelect,
+  trackUnitSelect,
+  ordinalFloorName,
+} from '../lib/analytics'
 import { TYPICAL_PLAN_VIEWPOINTS } from '../lib/planViews'
 import { useUnitFilters } from '../hooks/useUnitFilters'
 import { planRecord } from '../lib/saveables'
@@ -79,7 +85,7 @@ const LAYER_STYLE = {
  *  vantage marks and the residence outlines share one coordinate space. */
 const [, , TYPICAL_PLAN_W, TYPICAL_PLAN_H] = TYPICAL_PLAN_VIEWBOX.split(' ').map(Number)
 
-const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, onViewpoint }) => {
+const FloorExplorer = ({ open, initialFrame, initialRank, initialPicked, onClose, onEnquire, onViewpoint }) => {
   const rootRef = useRef(null)
   const buildingRef = useRef(null)
   const buildingBoxRef = useRef(null)
@@ -95,6 +101,13 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
   const [isoOpen, setIsoOpen] = useState(false)
   const [isoUnitId, setIsoUnitId] = useState(null)
   const [zoomPlan, setZoomPlan] = useState(null)
+  // Opening a residence's plan sheet — from the grid or the compare drawer —
+  // is the actual "select a unit" moment on Search by unit, so it's the one
+  // place unit-selection analytics are tracked.
+  const onUnitZoom = (p) => {
+    if (p) trackUnitSelect(p)
+    setZoomPlan(p)
+  }
   // A residence picked off the typical-plan overlay — overrides the
   // rank-based plan until the floor/elevation selection changes again.
   const [unitKey, setUnitKey] = useState(null)
@@ -244,6 +257,15 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
     { dependencies: [sideIdx], scope: rootRef },
   )
 
+  // Analytics: one view per open; the floor clicked on the orbit to open the
+  // explorer counts as a selection.
+  useEffect(() => {
+    if (!open) return
+    trackFloorPlanView()
+    if (initialPicked) trackFloorPlanSelect(ordinalFloorName(floorNumber))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const changeSide = (dir) => {
     flipDirRef.current = dir
     userFlipRef.current = true
@@ -258,7 +280,11 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
   }
   const onPlateLeave = () => setHoverInfo((h) => (h ? { ...h, out: true } : null))
   const onPlateClick = (i) => () => {
-    if (rankMap) setSelectedRank(rankMap[i])
+    if (!rankMap) return
+    if (rankMap[i] !== rank) {
+      trackFloorPlanSelect(ordinalFloorName(floorFromRank(rankMap[i], plateCount)))
+    }
+    setSelectedRank(rankMap[i])
   }
 
   // Visual selection keeps the floor it was picked from up front; search
@@ -660,7 +686,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
             compare={filters.compare}
             toggleCompare={filters.toggleCompare}
             compareFull={filters.compareFull}
-            onZoom={setZoomPlan}
+            onZoom={onUnitZoom}
             onReset={filters.reset}
           />
         )}
@@ -696,7 +722,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, onClose, onEnquire, on
           plans={comparePlans}
           onClose={() => setCompareOpen(false)}
           onRemove={filters.toggleCompare}
-          onZoom={setZoomPlan}
+          onZoom={onUnitZoom}
         />
       )}
       <PlanZoom plan={zoomPlan} onClose={() => setZoomPlan(null)} />

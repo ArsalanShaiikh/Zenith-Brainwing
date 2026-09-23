@@ -22,6 +22,7 @@ import {
   wrapFp,
 } from '../lib/floorplanOrbit'
 import { floorFromRank } from '../lib/floorplans'
+import { trackMenuSelect } from '../lib/analytics'
 import { useVisitor } from '../hooks/useVisitor'
 import Logo from './Logo'
 import { BRAND_LANE } from '../lib/brandLane'
@@ -814,6 +815,7 @@ const Landing = ({ onView, onPoint }) => {
   const onMenuSelect = useCallback(
     (id) => {
       setInteracted(true)
+      trackMenuSelect(id)
       if (id === 'amenities') {
         setModeSafe('amenities') // frame 20 already carries the podium tag
       } else if (id === 'floorplan') {
@@ -898,7 +900,7 @@ const Landing = ({ onView, onPoint }) => {
     // turntable is handed over as its seam twin rather than its own index.
     const here = wrapIn(setRef.current, stateRef.current.pos)
     const frame = setRef.current === 'fp' ? (seamFromFp(here)?.orbit ?? 40) : here
-    setFloorDetail((d) => ({ open: true, frame, rank, openId: d.openId + 1 }))
+    setFloorDetail((d) => ({ open: true, frame, rank, picked: true, openId: d.openId + 1 }))
   }, [wrapIn])
 
   const closeFloorDetail = useCallback(() => {
@@ -1320,6 +1322,7 @@ const Landing = ({ onView, onPoint }) => {
         open={floorDetail.open}
         initialFrame={floorDetail.frame}
         initialRank={floorDetail.rank}
+        initialPicked={floorDetail.picked}
         onClose={closeFloorDetail}
         onEnquire={() => onView?.('enquire')}
         onViewpoint={(mark) => onView?.('views', { state: viewpointNavState(mark) })}

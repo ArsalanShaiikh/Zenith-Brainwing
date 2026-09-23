@@ -3,6 +3,7 @@ import { client } from '../sanity/client'
 import { urlFor } from '../sanity/image'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
+import { trackFloorPlanView, trackFloorPlanSelect } from '../lib/analytics'
 
 /** Areas transcribed from the MahaRERA-stamped sheets. */
 
@@ -48,10 +49,15 @@ useEffect(() => {
 
 
   useViewReveal(active, rootRef)
+
+  useEffect(() => {
+    if (active) trackFloorPlanView()
+  }, [active])
   const { contextSafe } = useGSAP({ scope: rootRef })
 
   // eslint-disable-next-line react-hooks/refs
   const pick = contextSafe((n) => {
+    if (n !== i) trackFloorPlanSelect(plans[n]?.name)
     setI(n)
     const el = sheetRef.current
     if (!el || prefersReducedMotion()) return
