@@ -36,4 +36,7 @@ create policy "visitors can submit enquiries"
 create policy "admins can read enquiries"
   on public.enquiries for select to authenticated using (true);
 
+-- Live updates for the admin Enquiries table (src/admin/Enquiries.jsx).
+alter publication supabase_realtime add table public.enquiries;
+
 commit;
