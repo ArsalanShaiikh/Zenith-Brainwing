@@ -21,7 +21,7 @@ const KEY = 'zenith.visitor.v1'
 
 const STAGES = ['fullscreen', 'name', 'welcome', 'done']
 
-const EMPTY = { name: '', stage: 'fullscreen', saved: [] }
+const EMPTY = { name: '', stage: 'fullscreen', saved: [], resumed: false }
 
 /** The anonymous analytics id (lib/analytics.js, lib/geo.js) and the
  *  once-per-visitor location flag. Dropped on "New visitor" so the next
@@ -38,10 +38,19 @@ const read = () => {
     const raw = sessionStorage.getItem(KEY)
     if (!raw) return EMPTY
     const v = JSON.parse(raw)
+    const name = typeof v.name === 'string' ? v.name : ''
+    const stage = STAGES.includes(v.stage) ? v.stage : 'fullscreen'
+    // A reload partway into a visit. Browsers drop full screen on every
+    // reload, so the gate goes back up on its full-screen page — and since
+    // a reload on a kiosk usually means a new person is standing there, that
+    // page asks: carry on with this visitor, or start a new one?
+    // (`v.resumed` too: reloading again before answering keeps the question.)
+    const resumed = Boolean(name) && (stage === 'welcome' || stage === 'done' || v.resumed === true)
     return {
-      name: typeof v.name === 'string' ? v.name : '',
-      stage: STAGES.includes(v.stage) ? v.stage : 'fullscreen',
+      name,
+      stage: resumed ? 'fullscreen' : stage,
       saved: Array.isArray(v.saved) ? v.saved.filter(isRecord) : [],
+      resumed,
     }
   } catch {
     return EMPTY
@@ -65,7 +74,11 @@ export const VisitorProvider = ({ children }) => {
     }
   }, [state])
 
-  const setStage = useCallback((stage) => setState((s) => ({ ...s, stage })), [])
+  // Reaching 'done' settles a resumed visit; the next reload asks afresh.
+  const setStage = useCallback(
+    (stage) => setState((s) => ({ ...s, stage, resumed: stage === 'done' ? false : s.resumed })),
+    [],
+  )
 
   const setName = useCallback(
     (name) => setState((s) => ({ ...s, name: name.trim().slice(0, 40) })),
@@ -90,15 +103,18 @@ export const VisitorProvider = ({ children }) => {
    * start a new analytics visitor, and put the entry gate back up. Full screen
    * is kept when it's still held (the gate opens on the name, not on the full
    * screen ask), so a sales host can do this between visitors without the
-   * screen jumping out of full screen.
+   * screen jumping out of full screen. `stage` overrides where the gate
+   * reopens — the gate's own "New visitor" has just asked for full screen
+   * already, so it goes straight to the name.
    */
-  const resetVisitor = useCallback(() => {
+  const resetVisitor = useCallback((stage) => {
     try {
       ANALYTICS_KEYS.forEach((k) => sessionStorage.removeItem(k))
     } catch {
       /* storage unavailable — the next visitor shares the old analytics id */
     }
-    setState({ ...EMPTY, stage: isFullscreen() ? 'name' : 'fullscreen' })
+    const next = STAGES.includes(stage) ? stage : isFullscreen() ? 'name' : 'fullscreen'
+    setState({ ...EMPTY, stage: next })
     setVisit((v) => v + 1)
   }, [])
 
@@ -110,6 +126,7 @@ export const VisitorProvider = ({ children }) => {
       name: state.name,
       stage: state.stage,
       gateOpen: state.stage !== 'done',
+      resumed: state.resumed,
       saved: state.saved,
       savedCount: state.saved.length,
       isSaved,

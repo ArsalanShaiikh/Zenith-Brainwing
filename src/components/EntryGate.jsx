@@ -34,7 +34,7 @@ const displayName = (raw) =>
  * (see the reveal effect there).
  */
 const EntryGate = () => {
-  const { stage, name, setName, setStage } = useVisitor()
+  const { stage, name, setName, setStage, resumed, savedCount, resetVisitor } = useVisitor()
 
   const rootRef = useRef(null)
   const panelRef = useRef(null)
@@ -84,6 +84,29 @@ const EntryGate = () => {
     await requestFullscreen()
     setStage('name')
   }
+
+  // --- After a reload: the same visitor, or a new one? --------------------
+  // Both answers ask for full screen first (still inside the tap, which the
+  // browser requires). Continuing hands straight back to the app with the
+  // name and selection intact; a new visitor clears them and lands on the
+  // name. Neither is the sheet-wide tap: on this page the choice matters.
+  const onContinue = async (e) => {
+    e.stopPropagation()
+    if (enteringRef.current) return
+    enteringRef.current = true
+    await requestFullscreen()
+    finish()
+  }
+
+  const onNewVisitor = async (e) => {
+    e.stopPropagation()
+    if (enteringRef.current) return
+    enteringRef.current = true
+    await requestFullscreen()
+    resetVisitor('name')
+  }
+
+  const asking = stage === 'fullscreen' && resumed
 
   // --- Stage 2 → 3. -------------------------------------------------------
   const onSubmitName = (e) => {
@@ -149,13 +172,13 @@ const EntryGate = () => {
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Runwal Zenith"
-      onClick={stage === 'fullscreen' ? onEnterFullscreen : undefined}
+      onClick={stage === 'fullscreen' && !asking ? onEnterFullscreen : undefined}
       className={[
         'fixed inset-0 z-200 grid place-content-center place-items-center gap-6 overflow-y-auto bg-paper px-6 text-ink md:gap-7',
         // Phone on its side (≤460px tall): the stacked lockup + form ran the
         // Continue button off the bottom. Side by side, it all fits.
         'stubby:grid-flow-col stubby:gap-10 stubby:py-4',
-        stage === 'fullscreen' ? 'cursor-pointer' : '',
+        stage === 'fullscreen' && !asking ? 'cursor-pointer' : '',
       ].join(' ')}
       style={{ clipPath: 'inset(0% 0% 0% 0%)' }}
     >
@@ -175,7 +198,55 @@ const EntryGate = () => {
       </div>
 
       <div ref={panelRef} className="flex w-full max-w-[420px] flex-col items-center opacity-0">
-        {stage === 'fullscreen' && (
+        {asking && (
+          <div className="flex flex-col items-center gap-4 text-center md:gap-5">
+            <div className="flex flex-col items-center gap-1">
+              <span className="t-label text-ink-3">Welcome back</span>
+              <span className="font-fine text-[clamp(26px,4.5vw,44px)] leading-[1.05] tracking-[-0.02em] text-ink">
+                {name}
+              </span>
+            </div>
+            <p className="max-w-[34ch] text-[12px] font-light leading-relaxed text-ink-3 md:text-[13px]">
+              {savedCount
+                ? `Carry on with ${savedCount} marked, or start fresh for someone new.`
+                : 'Carry on with this visit, or start fresh for someone new.'}
+            </p>
+            {/* Side by side when they fit, stacked when they don't (a long
+                first name, or a phone on its side, where height is short
+                but a row would be too wide for the panel). */}
+            <div className="flex max-w-full flex-col items-center gap-2.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3 stubby:flex-col">
+              <button type="button" onClick={onContinue} className={`${pill} max-w-full whitespace-nowrap`}>
+                <span className="truncate">Continue as {name.split(' ')[0]}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.6]">
+                  <path d="M4 12h15M13 6l6 6-6 6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={onNewVisitor}
+                className={[
+                  'inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-ink/25 px-6 py-3',
+                  'text-[10px] uppercase tracking-[0.16em] text-ink',
+                  'transition-colors duration-200 hover:border-ink hover:bg-ink hover:text-paper',
+                  'md:px-7 md:py-3.5 md:text-[11px] 3xl:px-9 3xl:py-4 3xl:text-[12px]',
+                  'touch:py-4',
+                ].join(' ')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.6]">
+                  <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" />
+                </svg>
+                New visitor
+              </button>
+            </div>
+            {fullscreenSupported() && (
+              <span className="text-[10px] uppercase tracking-[0.16em] text-ink-3/70 md:text-[11px]">
+                Either opens full screen
+              </span>
+            )}
+          </div>
+        )}
+
+        {stage === 'fullscreen' && !asking && (
           <div className="flex flex-col items-center gap-4 text-center md:gap-5">
             <p className="max-w-[32ch] text-[12px] font-light leading-relaxed text-ink-3 md:text-[13px]">
               {fullscreenSupported()
