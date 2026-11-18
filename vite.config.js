@@ -24,14 +24,31 @@ const apiUploadDevMiddleware = () => ({
       req.on('end', async () => {
         res.setHeader('Content-Type', 'application/json')
         try {
-          const { filename, pdfBase64 } = JSON.parse(body || '{}')
+          const parsed = JSON.parse(body || '{}')
+          const hostSheetUrl = new URL('./api/hostSheet.js', import.meta.url)
+          const { hostSheet, isSheetTokenRequest, issueSheetUploadToken } = await import(
+            `${hostSheetUrl.href}?t=${Date.now()}`
+          )
+
+          // Same split as api/upload.js: normally just a token for the
+          // browser's direct upload; base64 only from an older build.
+          if (isSheetTokenRequest(parsed)) {
+            try {
+              res.end(JSON.stringify(await issueSheetUploadToken(parsed, req)))
+            } catch (err) {
+              console.error('Refused a sheet upload token', err)
+              res.statusCode = 400
+              res.end(JSON.stringify({ error: 'Could not authorise the upload' }))
+            }
+            return
+          }
+
+          const { filename, pdfBase64 } = parsed
           if (!filename || !pdfBase64) {
             res.statusCode = 400
             res.end(JSON.stringify({ error: 'Missing filename or pdfBase64' }))
             return
           }
-          const hostSheetUrl = new URL('./api/hostSheet.js', import.meta.url)
-          const { hostSheet } = await import(`${hostSheetUrl.href}?t=${Date.now()}`)
           const url = await hostSheet({ filename, pdfBase64 })
           res.end(JSON.stringify({ url }))
         } catch (err) {
