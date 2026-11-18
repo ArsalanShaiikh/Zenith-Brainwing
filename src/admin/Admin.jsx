@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseConfigured } from '../lib/supabase'
 import AdminLogin from './AdminLogin'
 import Heatmap from './Heatmap'
 import VisitorLocation from './VisitorLocation'
@@ -1389,51 +1389,48 @@ const AdminDashboard = () => {
      LOAD GA4 DATA
   ======================================================= */
 
-  const loadAnalytics = async () => {
-    setGaLoading(true)
-    setGaError('')
-
-    const { data, error } =
-      await supabase.functions.invoke(
-        'ga4-analytics',
-        {
-          body: {},
-        }
-      )
-
-    if (error) {
-      console.error(
-        'GA4 FUNCTION ERROR:',
-        error
-      )
-
-      setGaError(
-        error.message ||
-          'Unable to load GA4 analytics'
-      )
-
-      setGaLoading(false)
-      return
+  // Resolves to the state the GA panel should show; never rejects, so a
+  // network failure can't leave the panel stuck on "Loading".
+  const fetchAnalytics = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ga4-analytics', { body: {} })
+      if (error) {
+        console.error('GA4 FUNCTION ERROR:', error)
+        return { data: null, error: error.message || 'Unable to load GA4 analytics' }
+      }
+      if (!data?.success) {
+        return { data: null, error: data?.error || 'Google Analytics returned an error' }
+      }
+      return { data, error: '' }
+    } catch (err) {
+      console.error('GA4 FUNCTION ERROR:', err)
+      return { data: null, error: 'Unable to load GA4 analytics' }
     }
+  }
 
-    console.log('GA4 DATA:', data)
-
-    if (!data?.success) {
-      setGaError(
-        data?.error ||
-          'Google Analytics returned an error'
-      )
-
-      setGaLoading(false)
-      return
-    }
-
-    setGaData(data)
+  const applyAnalytics = ({ data, error }) => {
+    if (data) setGaData(data)
+    setGaError(error)
     setGaLoading(false)
   }
 
+  // Refresh / retry buttons.
+  const loadAnalytics = async () => {
+    setGaLoading(true)
+    setGaError('')
+    applyAnalytics(await fetchAnalytics())
+  }
+
+  // First load: gaLoading already starts true, so only the result is set.
   useEffect(() => {
-    loadAnalytics()
+    let live = true
+    fetchAnalytics().then((result) => {
+      if (live) applyAnalytics(result)
+    })
+    return () => {
+      live = false
+    }
+     
   }, [])
 
   /* =======================================================
@@ -2205,6 +2202,24 @@ const AdminDashboard = () => {
 ========================================================= */
 
 const Admin = () => {
+  if (!supabaseConfigured) return <AdminNotConfigured />
+  return <AdminAuthGate />
+}
+
+/** Shown instead of a login that could never succeed. */
+const AdminNotConfigured = () => (
+  <main className="flex min-h-screen items-center justify-center bg-[#0b0a08] px-6 text-center text-[#f3f0ea]">
+    <div className="max-w-md">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[#a8a297]">Admin unavailable</p>
+      <p className="mt-3 text-[15px] leading-relaxed">
+        This build has no Supabase connection. Set VITE_SUPABASE_URL and
+        VITE_SUPABASE_PUBLISHABLE_KEY (see .env.example) and rebuild.
+      </p>
+    </div>
+  </main>
+)
+
+const AdminAuthGate = () => {
   const [session, setSession] = useState(undefined)
 
   useEffect(() => {

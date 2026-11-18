@@ -129,7 +129,7 @@ const Heatmap = () => {
       clearInterval(tick)
       supabase.removeChannel(channel)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   /* ---------- 7 / 30 / 90 DAYS: plain historical fetch ---------- */
@@ -158,7 +158,7 @@ const Heatmap = () => {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [period, historyDays])
 
   /* ---------- resolve what the UI shows ---------- */

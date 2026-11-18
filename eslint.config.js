@@ -20,7 +20,7 @@ export default defineConfig([
   },
   {
     // Vercel serverless functions — Node, not the browser this app ships to.
-    files: ['api/**/*.js'],
+    files: ['api/**/*.js', 'vite.config.js'],
     extends: [js.configs.recommended],
     languageOptions: {
       globals: globals.node,

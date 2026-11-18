@@ -72,7 +72,7 @@ const VisitorLocation = () => {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [period, historyDays])
 
   const loaded = state.period === period

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import { ViewProvider } from './context/ViewContext'
 import { VisitorProvider } from './context/VisitorContext'
@@ -130,20 +130,25 @@ const App = () => {
     initHeatmapTracking()
   }, [])
 
+  // /admin is staff-only: none of the visitor chrome belongs on it — not the
+  // entry gate's name prompt, not the full-screen guard, not visitor
+  // profiling (which would also count staff as visitors).
+  const { pathname } = useLocation()
+  const isAdmin = pathname.startsWith('/admin')
+
   return (
     <VisitorProvider>
       <ViewProvider>
-
         <AppRoutes />
 
-        <VisitorProfileTracker />
-
-        <BrandMark />
-
-        <EntryGate />
-
-        <FullscreenGuard />
-
+        {!isAdmin && (
+          <>
+            <VisitorProfileTracker />
+            <BrandMark />
+            <EntryGate />
+            <FullscreenGuard />
+          </>
+        )}
       </ViewProvider>
     </VisitorProvider>
   )

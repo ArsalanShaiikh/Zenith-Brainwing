@@ -4,10 +4,27 @@ import { urlFor } from '../sanity/image'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 import { trackFloorPlanView, trackFloorPlanSelect } from '../lib/analytics'
+import { FLOOR_PLANS, sqft } from '../lib/floorplans'
 
-/** Areas transcribed from the MahaRERA-stamped sheets. */
-
-
+/**
+ * What the view shows when the CMS can't answer — Sanity unconfigured in this
+ * build, offline, or an empty document. Same shape as the Sanity query below,
+ * built from the MahaRERA areas and sheets the site already ships in
+ * lib/floorplans.js and public/img/plans, so the view is never blank.
+ */
+const BUNDLED = {
+  heading: 'Floor plans',
+  title: 'Residences at Zenith',
+  plans: FLOOR_PLANS.map((p) => ({
+    _key: p.key,
+    name: p.name,
+    subtitle: p.config || p.band || '',
+    reraCarpet: p.carpet ? sqft(p.carpet.sqft) : '—',
+    balcony: p.balcony ? sqft(p.balcony.sqft) : '—',
+    totalArea: p.total ? sqft(p.total.sqft) : '—',
+    imageUrl: `${p.base}-1600.webp`,
+  })),
+}
 
 const Floorplan = ({ active }) => {
   const rootRef = useRef(null)
@@ -18,33 +35,48 @@ const [heading, setHeading] = useState("")
 const [title, setTitle] = useState("")
 
 useEffect(() => {
+  let live = true
+  const applyBundled = () => {
+    if (!live) return
+    setHeading(BUNDLED.heading)
+    setTitle(BUNDLED.title)
+    setPlans(BUNDLED.plans)
+  }
   client
     .fetch(`
       *[_type=="zenithSite"][0]{
         floorplan{
           heading,
           description,
-        plans[]{
-  _key,
-  name,
-  subtitle,
-  reraCarpet,
-  balcony,
-  totalArea,
-  image{
-    asset->
-  }
-}
+          plans[]{
+            _key,
+            name,
+            subtitle,
+            reraCarpet,
+            balcony,
+            totalArea,
+            image{
+              asset->
+            }
+          }
         }
       }
     `)
-    
     .then((data) => {
-  console.log(data.floorplan.plans);
-  setHeading(data.floorplan.heading);
-  setTitle(data.floorplan.description);
-  setPlans(data.floorplan.plans || []);
-})
+      const fp = data?.floorplan
+      if (!fp?.plans?.length) return applyBundled()
+      if (!live) return
+      setHeading(fp.heading || BUNDLED.heading)
+      setTitle(fp.description || BUNDLED.title)
+      setPlans(fp.plans)
+    })
+    .catch((err) => {
+      console.warn('[floorplan] CMS unavailable, using bundled plans:', err?.message || err)
+      applyBundled()
+    })
+  return () => {
+    live = false
+  }
 }, [])
 
 
@@ -66,7 +98,6 @@ useEffect(() => {
   })
 
   const cur = plans[i]
-  console.log("Selected plan:", cur);
   if (!cur) return null;
 
 const SPECS = [
@@ -75,8 +106,6 @@ const SPECS = [
   ['Total', cur.totalArea],
 ]
 
-console.log(cur.image);
-console.log(cur.image?.asset);
 
   return (
     <div
@@ -165,7 +194,7 @@ console.log(cur.image?.asset);
         <picture className="block h-full min-h-0 w-full min-w-0">
       <div className="relative w-full h-full overflow-hidden rounded-lg bg-white">
   <img
-    src={urlFor(cur.image).width(1600).url()}
+    src={cur.imageUrl || urlFor(cur.image).width(1600).url()}
     alt={cur.name}
     className="w-full h-full object-contain"
   />

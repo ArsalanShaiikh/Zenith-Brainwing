@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, supabaseConfigured } from './supabase'
 
 /**
  * GA4 event helpers. gtag is initialised once in index.html; this only sends
@@ -29,6 +29,7 @@ let lastLive = { name: null, at: 0 }
 
 /** Live copy for the /admin dashboard. Fire-and-forget: never throws. */
 const saveFloorSelection = (floorName) => {
+  if (!supabaseConfigured) return
   try {
     const name = typeof floorName === 'string' ? floorName.trim() : ''
     if (!name || name.length > MAX_FLOOR_NAME) return
@@ -65,6 +66,7 @@ let lastUnitLive = { key: null, at: 0 }
 
 /** Live copy for the /admin Unit Interest section. Fire-and-forget: never throws. */
 const saveUnitSelection = (unitId, unitName) => {
+  if (!supabaseConfigured) return
   try {
     const name = typeof unitName === 'string' ? unitName.trim() : ''
     if (!name || name.length > MAX_UNIT_NAME) return
@@ -119,6 +121,7 @@ const MENU_EVENTS = {
 // narrow table from the abandoned interaction_events experiment — this only
 // ever stores which of the six real nav items was opened, nothing generic.
 const savePageView = (page) => {
+  if (!supabaseConfigured) return
   try {
     const visitorId = getVisitorId()
     if (!visitorId) return
@@ -156,7 +159,7 @@ let heatmapQueue = []
 let heatmapInitialized = false
 
 const flushHeatmapQueue = () => {
-  if (!heatmapQueue.length) return
+  if (!heatmapQueue.length || !supabaseConfigured) return
   const batch = heatmapQueue
   heatmapQueue = []
 
@@ -176,7 +179,7 @@ const flushHeatmapQueue = () => {
  * dashboard doesn't pollute its own heatmap data.
  */
 export const initHeatmapTracking = () => {
-  if (heatmapInitialized || typeof document === 'undefined') return
+  if (heatmapInitialized || typeof document === 'undefined' || !supabaseConfigured) return
   heatmapInitialized = true
 
   const onClick = (e) => {
