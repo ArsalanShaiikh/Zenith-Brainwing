@@ -146,7 +146,11 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
   const lineRef = useRef(null)
   const dotRef = useRef(null)
   const labelRef = useRef(null)
-  const leftSide = spot.side === 'left'
+  // A spot's preferred side can run the label off a narrow screen (on a phone
+  // "Rooftop Podium" sat at x 374–481 of a 390px viewport: unreadable and all
+  // but untappable). `flip` puts it on the other side when only that one fits.
+  const [flip, setFlip] = useState(false)
+  const leftSide = (spot.side === 'left') !== flip
 
   const position = useCallback(() => {
     const el = rootRef.current
@@ -154,12 +158,25 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
     if (!el || !r) return
     el.style.left = `${r.dx + spot.nx * r.dw}px`
     el.style.top = `${r.dy + spot.ny * r.dh}px`
+
+    const label = labelRef.current
+    if (!label || !label.offsetWidth) return
+    const shown = label.getBoundingClientRect().width // includes the button's scale
+    const reach = 150 * (shown / label.offsetWidth) + shown // leader run + label
+    const x = el.getBoundingClientRect().left // the anchor, in viewport px
+    const fits = (left) => (left ? x - reach >= 8 : x + reach <= window.innerWidth - 8)
+    const want = spot.side === 'left'
+    const side = fits(want) || !fits(!want) ? want : !want
+    setFlip(side !== want)
   }, [spot, canvasRef])
 
   useEffect(() => {
-    position()
+    const raf = requestAnimationFrame(position)
     window.addEventListener('resize', position)
-    return () => window.removeEventListener('resize', position)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', position)
+    }
   }, [position])
 
   useGSAP(
