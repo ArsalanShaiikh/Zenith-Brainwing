@@ -27,6 +27,23 @@ const Location = ({ active }) => {
   // MapLibre and its tiles for a panel the user hasn't reached. It re-mounts
   // on revisit, which is cheap with tiles cached, and the void backdrop means
   // there is never a white flash while it re-initialises.
+  //
+  // "Actually open" means open for a beat, not just for one render: the view
+  // index is app-wide, so arriving at a later panel (Enquire) after having
+  // visited Location renders this view active for a single frame before the
+  // shell jumps on. Mounting the map in that frame started MapLibre's 1 MB
+  // load only to unmount it mid-init, which threw "'container' must be a
+  // String or HTMLElement". A short settle delay skips those pass-throughs.
+  const [mapOn, setMapOn] = useState(false)
+  useEffect(() => {
+    if (!active) return undefined
+    const t = setTimeout(() => setMapOn(true), 200)
+    return () => {
+      clearTimeout(t)
+      setMapOn(false)
+    }
+  }, [active])
+
   const select = (id) => setActiveId((cur) => (cur === id ? null : id))
   const toggleGroup = (id) =>
     setOpenGroups((prev) => {
@@ -44,7 +61,7 @@ const Location = ({ active }) => {
       {/* Full-bleed map. data-observer-ignore keeps wheel/drag on the map for
           panning and zoom instead of triggering a view change. */}
       <div className="absolute inset-0 z-0 bg-void" data-observer-ignore>
-        {active && (
+        {active && mapOn && (
           <Suspense fallback={null}>
             <LocationMap
               activeId={activeId}

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { client } from '../sanity/client'
+import { client, sanityConfigured } from '../sanity/client'
 import { urlFor } from '../sanity/image'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
@@ -41,6 +41,12 @@ useEffect(() => {
     setHeading(BUNDLED.heading)
     setTitle(BUNDLED.title)
     setPlans(BUNDLED.plans)
+  }
+  if (!sanityConfigured) {
+    applyBundled()
+    return () => {
+      live = false
+    }
   }
   client
     .fetch(`

@@ -4,7 +4,7 @@ import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 
 import { fallbackSrc } from '../lib/images'
-import { client } from "../sanity/client";
+import { client, sanityConfigured } from "../sanity/client";
 import { urlFor } from "../sanity/image";
 
 import { amenityRecord } from '../lib/saveables'
@@ -39,6 +39,8 @@ const tiles = TILES.map((tile, index) => ({
 }));
 
 useEffect(() => {
+  // No CMS in this build: the bundled TILES are the content.
+  if (!sanityConfigured) return
   client
     .fetch(`
       *[_type=="zenithSite"][0]{
@@ -48,7 +50,7 @@ useEffect(() => {
     .then((data) => {
       setAmenityData(data?.amenities ?? null);
     })
-    .catch(console.error);
+    .catch((err) => console.warn('[amenities] CMS unavailable, using bundled tiles:', err?.message || err));
 }, []);
 
   useViewReveal(active, rootRef)

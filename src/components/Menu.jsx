@@ -3,7 +3,7 @@ import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { VIEWS } from '../lib/views'
 import { srcSet, fallbackSrc } from '../lib/images'
 import Logo from './Logo'
-import { client } from "../sanity/client";
+import { client, sanityConfigured } from "../sanity/client";
 import { urlFor } from "../sanity/image";
 
 const META = {
@@ -32,16 +32,12 @@ const Menu = ({ onPick, onHome }) => {
   const [homepage, setHomepage] = useState(null);
 
 useEffect(() => {
+  // No CMS in this build: keep the bundled menu art, don't ask.
+  if (!sanityConfigured) return
   client
     .fetch(`*[_type=="zenithSite"][0]{homepage}`)
-    .then((data) => {
-      console.log("DATA:", data);
-      console.log("HOMEPAGE:", data.homepage);
-      console.log("BACKGROUND:", data.homepage?.backgroundImage);
-
-      setHomepage(data.homepage);
-    })
-    .catch((err) => console.error(err));
+    .then((data) => setHomepage(data?.homepage ?? null))
+    .catch((err) => console.warn('[menu] CMS unavailable, using bundled art:', err?.message || err));
 }, []);
 
   // Entrance. The paper cover is inherited from the landing gate and wiped
