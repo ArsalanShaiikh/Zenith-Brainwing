@@ -5,6 +5,7 @@ import { ViewProvider } from './context/ViewContext'
 import { VisitorProvider } from './context/VisitorContext'
 import { VIEWS } from './lib/views'
 import { initHeatmapTracking } from './lib/analytics'
+import { flushPendingEnquiries } from './lib/enquiries'
 
 import Landing from './components/Landing'
 import Shell from './components/Shell'
@@ -128,6 +129,8 @@ const App = () => {
   // itself; see initHeatmapTracking in lib/analytics.js.
   useEffect(() => {
     initHeatmapTracking()
+    // Leads that couldn't be saved earlier on this device (offline, etc.).
+    flushPendingEnquiries()
   }, [])
 
   // /admin is staff-only: none of the visitor chrome belongs on it — not the

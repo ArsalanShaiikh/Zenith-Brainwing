@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGSAP } from '../Gsapconfig'
 import { useViewReveal } from '../hooks/useViewReveal'
 import { magnetic } from '../animations/magnetic'
+import { submitEnquiry, validateEnquiry } from '../lib/enquiries'
 
 const FIELDS = [
   { id: 'name', label: 'Name', type: 'text', autoComplete: 'name' },
@@ -16,6 +17,22 @@ const Enquire = ({ active }) => {
   const submitRef = useRef(null)
   const [filled, setFilled] = useState({})
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [errors, setErrors] = useState({})
+  const formRef = useRef(null)
+
+  // On a shared exhibition screen the next visitor must not find the last
+  // one's name, phone and email still on the form. Clear it shortly after
+  // the confirmation has been seen.
+  useEffect(() => {
+    if (!sent) return undefined
+    const t = setTimeout(() => {
+      formRef.current?.reset()
+      setFilled({})
+      setSent(false)
+    }, 6000)
+    return () => clearTimeout(t)
+  }, [sent])
 
   useViewReveal(active, rootRef)
   const { contextSafe } = useGSAP({ scope: rootRef })
@@ -82,9 +99,20 @@ const Enquire = ({ active }) => {
         </div>
 
         <form
+          ref={formRef}
           noValidate
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
+            if (sending || sent) return
+            const data = Object.fromEntries(new FormData(e.currentTarget))
+            const problems = validateEnquiry(data)
+            setErrors(problems)
+            if (Object.keys(problems).length) return
+            setSending(true)
+            // Saved, or kept on this device and retried — never lost; see
+            // lib/enquiries.js. The visitor gets the same confirmation.
+            await submitEnquiry(data)
+            setSending(false)
             setSent(true)
           }}
           className="flex min-w-0 flex-col gap-4 md:gap-5"
@@ -112,12 +140,20 @@ const Enquire = ({ active }) => {
                 autoComplete={f.autoComplete}
                 onChange={mark(f.id)}
                 onBlur={mark(f.id)}
+                readOnly={sent}
+                aria-invalid={errors[f.id] ? 'true' : undefined}
+                aria-describedby={errors[f.id] ? `${f.id}-error` : undefined}
                 className="w-full border-0 border-b border-hair bg-transparent px-0 pb-2 pt-0.5 font-ui text-[16px] font-light text-ink outline-none"
               />
               <span
                 aria-hidden="true"
                 className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-brass transition-transform duration-450 ease-zenith group-focus-within:scale-x-100"
               />
+              {errors[f.id] && (
+                <p id={`${f.id}-error`} className="mt-1 text-[11px] font-light text-brass-ink">
+                  {errors[f.id]}
+                </p>
+              )}
             </div>
           ))}
 
@@ -154,7 +190,7 @@ const Enquire = ({ active }) => {
               type="submit"
               className="inline-flex items-center gap-2.5 rounded-full bg-ink px-5 py-2.5 text-[12px] uppercase tracking-widest text-paper transition-colors duration-200 will-change-transform hover:bg-brass"
             >
-              <span>{sent ? 'Received' : 'Send enquiry'}</span>
+              <span>{sent ? 'Received' : sending ? 'Sending…' : 'Send enquiry'}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.5]">
                 <path d="M4 12h15M13 6l6 6-6 6" />
               </svg>
