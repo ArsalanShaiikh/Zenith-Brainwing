@@ -6,6 +6,7 @@ import { showcaseRecord } from '../lib/saveables'
 import { useVisitor } from '../hooks/useVisitor'
 import LikeButton from '../components/LikeButton'
 import { BRAND_LANE } from '../lib/brandLane'
+import { useSwipe } from '../hooks/useSwipe'
 
 /**
  * A point's media, shown full-screen. There's no auto-pan any more: multi-media
@@ -121,6 +122,9 @@ const Showcase = () => {
     return () => window.removeEventListener('keydown', onKey)
   }, [animated, n, gateOpen])
 
+  // Swipe through the frames on a touchscreen (left = next).
+  const swipe = useSwipe({ onLeft: () => go(1), onRight: () => go(-1) })
+
   if (!data) return null
 
   // Return to the orbit on the same frame this point lives on — the landing
@@ -128,7 +132,7 @@ const Showcase = () => {
   const goBack = () => navigate('/', { state: { returnPoint: id } })
 
   return (
-    <div ref={rootRef} className="fixed inset-0 z-100 select-none overflow-hidden bg-void">
+    <div ref={rootRef} {...swipe} className="fixed inset-0 z-100 touch-pan-y select-none overflow-hidden bg-void">
       {/* The media stack — one slide shown at a time. */}
       {data.media.map((m, i) => (
         <div

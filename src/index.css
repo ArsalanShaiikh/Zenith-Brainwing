@@ -114,6 +114,12 @@
 @custom-variant stubby (@media (max-height: 460px));
 /* Coarse pointers get no hover affordances. */
 @custom-variant touch (@media (hover: none));
+/* Any touchscreen, including touch displays that also have a mouse (where
+   hover: none is false). Used to give controls finger-sized hit areas. */
+@custom-variant coarse (@media (any-pointer: coarse));
+/* Touch, with the height to spare — for stacked lists whose rows would
+   otherwise push a panel off a short screen (a phone held sideways). */
+@custom-variant coarse-tall (@media (any-pointer: coarse) and (min-height: 621px));
 
 /* ============================================================
    Base
@@ -479,6 +485,31 @@
   outline-offset: 2px;
 }
 
+/* Touchscreens: a 13px thumb is too small for a finger. 26px, on a taller
+   track so it stays centred (wrapper height: UnitFilter, coarse:h-8). */
+@media (any-pointer: coarse) {
+  /* Separate rules on purpose: a selector list holding a pseudo-element the
+     browser doesn't know (::-moz-* in Chrome) invalidates the whole rule. */
+  .range-dual {
+    height: 2rem;
+  }
+  .range-dual::-webkit-slider-runnable-track {
+    height: 2rem;
+  }
+  .range-dual::-moz-range-track {
+    height: 2rem;
+  }
+  .range-dual::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+    margin-top: 3px;
+  }
+  .range-dual::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 /* Screen-reader-only. */
 @utility sr {
   position: absolute;
@@ -490,4 +521,11 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* The studio credit (BrandMark) floats above every screen at z-150 — which is
+   also above the modals (z-100/110), where it covered their bottom-right
+   controls (plan zoom's slider, compare). Any open modal hides it. */
+body:has([aria-modal='true']) [data-brand-mark] {
+  display: none;
 }

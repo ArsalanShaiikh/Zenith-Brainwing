@@ -176,7 +176,7 @@ const DownloadSelection = () => {
           'px-2.5 py-2 text-left transition-colors duration-300',
           'md:gap-3 md:px-3 md:py-2.5',
           'lg:gap-[clamp(8px,0.6vw,16px)] lg:px-[clamp(10px,0.7vw,20px)] lg:py-[clamp(7px,0.5vw,14px)]',
-          'short:py-1.5',
+          'short:py-1.5 coarse-tall:py-3!',
           empty
             ? 'cursor-not-allowed border border-ink/12 bg-ink/4 text-ink-3'
             : 'bg-ink text-paper hover:bg-brass-ink',

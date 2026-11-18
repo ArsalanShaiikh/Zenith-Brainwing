@@ -103,7 +103,7 @@ const OrbitMenu = ({ show, onSelect }) => {
                     'group relative flex w-full items-center gap-2.5 overflow-hidden pl-2.5 pr-2',
                     'border-b border-ink/12 py-3 text-left last:border-b-0 md:gap-3 md:pl-3 md:pr-2.5 md:py-3.5',
                     'lg:gap-[clamp(8px,0.65vw,17px)] lg:pl-4 lg:pr-3.5 lg:py-[clamp(11px,0.85vw,22px)]',
-                    'short:py-1.5',
+                    'short:py-1.5 coarse:short:py-2.5',
                   ].join(' ')}
                 >
                   {/* Ink wash + brass rule sweeping in from the left edge —
@@ -139,7 +139,7 @@ const OrbitMenu = ({ show, onSelect }) => {
                   </span>
 
                   <span className="relative flex shrink-0 items-center gap-2">
-                    <span className="hidden text-[8.5px] font-normal uppercase leading-none tracking-[0.14em] text-ink-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:block lg:text-[clamp(8.5px,0.42vw,11px)]">
+                    <span className="hidden text-[8.5px] font-normal uppercase leading-none tracking-[0.14em] text-ink-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 touch:opacity-100 sm:block lg:text-[clamp(8.5px,0.42vw,11px)]">
                       {META[v.id].stat}
                     </span>
                     <svg

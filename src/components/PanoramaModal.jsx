@@ -158,7 +158,7 @@ export default function PanoramaModal({ room, unitId, rooms = [], onNavigate, on
   if (!room) return null
 
   return (
-    <div className="fixed inset-0 z-110 bg-black/90 flex flex-col">
+    <div role="dialog" aria-modal="true" aria-label={room.label} className="fixed inset-0 z-110 bg-black/90 flex flex-col">
       <div className="flex items-center justify-between gap-4 border-b border-ink/12 bg-paper px-4 py-3 text-ink sm:px-5 lg:px-6">
         <h2 className="min-w-0 truncate text-base font-medium sm:text-lg lg:text-xl">{room.label}</h2>
         <div className="flex shrink-0 items-center gap-2">

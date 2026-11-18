@@ -325,10 +325,12 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                 onClick={onCompareView}
                 aria-label="Compare the view from each residence"
                 title="Compare view"
-                className="flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-200 hover:border-brass/50 hover:text-brass-ink"
+                className="flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-ink-2 transition-colors duration-200 hover:border-brass/50 hover:text-brass-ink coarse:py-3"
               >
                 <ViewIcon />
-                Compare view
+                {/* Icon-only on narrow phones: with the title beside it the
+                    labelled pill ran off the card at 320px. */}
+                <span className="max-sm:hidden">Compare view</span>
               </button>
             )}
             <button
@@ -442,7 +444,7 @@ const UnitCompare = ({ open, plans, onClose, onRemove, onZoom }) => {
                               type="button"
                               onClick={() => onRemove(p.key)}
                               aria-label={`Remove ${p.name} from compare`}
-                              className="shrink-0 text-[11px] text-ink-3 hover:text-ink"
+                              className="shrink-0 text-[11px] text-ink-3 hover:text-ink coarse:-my-2 coarse:grid coarse:h-10 coarse:w-10 coarse:place-items-center coarse:text-[16px]"
                             >
                               ×
                             </button>

@@ -78,7 +78,7 @@ const Enquire = ({ active }) => {
             <div className="flex items-baseline justify-between gap-3 border-t border-hair py-2">
               <dt className="t-label text-ink-3">Sales</dt>
               <dd className="m-0 text-[13px] font-light">
-                <a href="tel:+912200000000" className="hover:text-brass-ink">
+                <a href="tel:+912200000000" className="hover:text-brass-ink coarse:-my-3 coarse:inline-block coarse:py-3">
                   +91 22 0000 0000
                 </a>
               </dd>

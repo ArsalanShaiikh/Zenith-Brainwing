@@ -115,7 +115,7 @@ const Location = ({ active }) => {
                   type="button"
                   onClick={() => toggleGroup(g.id)}
                   aria-expanded={open}
-                  className="t-label flex w-full items-center justify-between gap-2 px-5 pb-1 pt-2 text-ink-3 lg:px-[clamp(20px,1.5vw,32px)]"
+                  className="t-label flex w-full items-center justify-between gap-2 px-5 pb-1 pt-2 text-ink-3 lg:px-[clamp(20px,1.5vw,32px)] coarse:pb-3! coarse:pt-3.5!"
                 >
                   <span>{g.label}</span>
                   <svg

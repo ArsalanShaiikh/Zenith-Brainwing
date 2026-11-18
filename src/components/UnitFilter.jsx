@@ -60,7 +60,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
           type="button"
           onClick={reset}
           disabled={!dirty}
-          className="group mt-3 flex items-center gap-2 text-[11px] text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-35 lg:mt-1.5 lg:text-[9px]"
+          className="group mt-3 flex items-center gap-2 text-[11px] text-ink-3 transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-35 lg:mt-1.5 lg:text-[9px] coarse:py-3! coarse:pr-3!"
         >
           <span className="inline-block h-px w-4 bg-current transition-all duration-300 group-hover:w-7" />
           Reset filters
@@ -77,7 +77,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
             <button
               type="button"
               onClick={clearCompare}
-              className="text-[10px] text-ink-3 underline underline-offset-4 hover:text-ink lg:text-[9px]"
+              className="text-[10px] text-ink-3 underline underline-offset-4 hover:text-ink lg:text-[9px] coarse:-my-2 coarse:px-2 coarse:py-3"
             >
               Clear
             </button>
@@ -97,7 +97,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
                     <button
                       type="button"
                       onClick={() => toggleCompare(key)}
-                      className="flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-2.5 py-1 text-[10.5px] text-ink-2 transition-colors duration-200 hover:border-ink/35 hover:text-ink lg:px-2 lg:py-0.5 lg:text-[10px]"
+                      className="flex items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-2.5 py-1 text-[10.5px] text-ink-2 transition-colors duration-200 hover:border-ink/35 hover:text-ink lg:px-2 lg:py-0.5 lg:text-[10px] coarse:gap-2.5! coarse:px-3! coarse:py-2.5!"
                     >
                       <span className="max-w-24 truncate">{p.name}</span>
                       <span aria-hidden="true">×</span>
@@ -110,7 +110,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
               type="button"
               onClick={onCompare}
               disabled={compare.length < 2}
-              className="mt-2.5 w-full rounded-full bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink disabled:pointer-events-none disabled:opacity-35 lg:py-1.5"
+              className="mt-2.5 w-full rounded-full bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink disabled:pointer-events-none disabled:opacity-35 lg:py-1.5 coarse:py-3!"
             >
               Compare now
             </button>
@@ -151,7 +151,7 @@ const UnitFilter = ({ filters, onCompare, onEnquire, onIsoView }) => {
       <button
         type="button"
         onClick={() => onEnquire?.()}
-        className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink lg:px-3.5 lg:py-2 lg:text-[9px] lg:tracking-[0.12em]"
+        className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink lg:px-3.5 lg:py-2 lg:text-[9px] lg:tracking-[0.12em] coarse:py-3!"
       >
         Enquire about a residence
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">
@@ -175,7 +175,7 @@ const Chip = ({ on, onClick, children }) => (
     onClick={onClick}
     aria-pressed={on}
     className={[
-      'rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.12em] transition-colors duration-200 lg:px-1.5 lg:py-0.5 lg:text-[9px] lg:tracking-[0.08em]',
+      'rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.12em] transition-colors duration-200 lg:px-1.5 lg:py-0.5 lg:text-[9px] lg:tracking-[0.08em] coarse:px-3! coarse:py-2.5!',
       on
         ? 'border-ink bg-ink text-paper'
         : 'border-ink/15 text-ink-2 hover:border-ink/40 hover:text-ink',
@@ -203,7 +203,7 @@ const AreaRange = ({ value, onChange }) => {
         <span className="truncate text-[9px] uppercase tracking-[0.16em] text-ink-3">sq.ft</span>
         <span>{sqft(hi)}</span>
       </div>
-      <div className="relative mt-1.5 flex h-5 items-center lg:h-4">
+      <div className="relative mt-1.5 flex h-5 items-center lg:h-4 coarse:h-8!">
         <div className="absolute inset-x-0 h-px bg-ink/15" />
         <div
           className="absolute h-px bg-brass"
@@ -263,7 +263,7 @@ const SortMenu = ({ value, onChange }) => {
         aria-haspopup="listbox"
         aria-expanded={open}
         className={[
-          'flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] transition-colors duration-200 lg:px-2 lg:py-1 lg:text-[10px]',
+          'flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] transition-colors duration-200 lg:px-2 lg:py-1 lg:text-[10px] coarse:px-3! coarse:py-2.5!',
           open ? 'border-brass/70 text-ink' : 'border-ink/15 text-ink-2 hover:text-ink',
         ].join(' ')}
       >

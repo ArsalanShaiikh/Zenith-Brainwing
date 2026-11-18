@@ -5,6 +5,7 @@ import { galleryRecord } from '../lib/saveables'
 import { useVisitor } from '../hooks/useVisitor'
 import LikeButton from '../components/LikeButton'
 import { BRAND_LANE } from '../lib/brandLane'
+import { useSwipe } from '../hooks/useSwipe'
 
 const N = GALLERY.length
 
@@ -151,8 +152,11 @@ const Gallery = ({ onBack }) => {
     })
   }, [idx])
 
+  // Swipe through the frames on a touchscreen (left = next).
+  const swipe = useSwipe({ onLeft: () => go(1), onRight: () => go(-1) })
+
   return (
-    <div ref={rootRef} className="fixed inset-0 z-100 select-none overflow-hidden bg-void">
+    <div ref={rootRef} {...swipe} className="fixed inset-0 z-100 touch-pan-y select-none overflow-hidden bg-void">
       {/* Slides. Only those within a small window of the current index carry a
           src, so entering the gallery doesn't pull all 23 full renders. */}
       {GALLERY.map((g, i) => {
@@ -265,6 +269,7 @@ const Gallery = ({ onBack }) => {
       {/* Thumbnail rail. */}
       <div
         ref={railRef}
+        data-swipe-ignore
         className="no-scrollbar absolute inset-x-0 bottom-0 z-30 flex items-center gap-2 overflow-x-auto px-3 py-3 md:gap-2.5 md:px-6 md:py-4"
       >
         {GALLERY.map((g, i) => {

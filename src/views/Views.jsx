@@ -292,7 +292,7 @@ const Views = ({ active }) => {
                       aria-pressed={on}
                       aria-label={`${v.metres} metres — ${v.label}`}
                       className={[
-                        'flex w-full items-center gap-2.5 px-4 py-2 text-left transition-colors duration-200 short:py-1.5',
+                        'flex w-full items-center gap-2.5 px-4 py-2 text-left transition-colors duration-200 short:py-1.5 coarse-tall:py-3!',
                         on ? 'text-ink' : 'text-ink-3 hover:bg-ink/8 hover:text-ink-2',
                       ].join(' ')}
                     >
@@ -337,7 +337,7 @@ const Views = ({ active }) => {
                       onClick={() => setTime(t.id)}
                       aria-pressed={on}
                       className={[
-                        'relative z-1 flex items-center justify-center gap-1.5 rounded-full py-1.5',
+                        'relative z-1 flex items-center justify-center gap-1.5 rounded-full py-1.5 coarse:py-3!',
                         'transition-colors duration-300 short:py-1',
                         on ? 'text-paper' : 'text-ink-3 hover:text-ink',
                       ].join(' ')}

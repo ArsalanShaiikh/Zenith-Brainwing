@@ -85,7 +85,7 @@ const IsoWalkthroughModal = ({ open, onClose, initialUnitId }) => {
                 type="button"
                 onClick={() => setUnitId(null)}
                 aria-label="Back to configuration picker"
-                className="flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[9px] uppercase tracking-[0.14em] text-ink-2 transition-colors duration-200 hover:text-ink touch:px-3.5 touch:py-2"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-[9px] uppercase tracking-[0.14em] text-ink-2 transition-colors duration-200 hover:text-ink touch:px-3.5 touch:py-2 coarse:px-4 coarse:py-3"
               >
                 <BackIcon />
                 Back

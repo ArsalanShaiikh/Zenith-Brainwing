@@ -190,7 +190,7 @@ const PlanZoom = ({ plan, onClose }) => {
             <button
               type="button"
               onClick={handleShare}
-              className="t-label rounded-full border border-ink/15 px-3 py-1.5 text-ink-2 transition-colors duration-200 hover:text-ink"
+              className="t-label rounded-full border border-ink/15 px-3 py-1.5 text-ink-2 transition-colors duration-200 hover:text-ink coarse:px-4 coarse:py-3"
             >
               {shared ? 'Copied' : 'Share'}
             </button>

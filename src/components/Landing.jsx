@@ -164,10 +164,25 @@ const Hotspot = ({ spot, active, canvasRef, onNavigate }) => {
     const shown = label.getBoundingClientRect().width // includes the button's scale
     const reach = 150 * (shown / label.offsetWidth) + shown // leader run + label
     const x = el.getBoundingClientRect().left // the anchor, in viewport px
-    const fits = (left) => (left ? x - reach >= 8 : x + reach <= window.innerWidth - 8)
+    const vw = window.innerWidth
+    const fits = (left) => (left ? x - reach >= 8 : x + reach <= vw - 8)
     const want = spot.side === 'left'
-    const side = fits(want) || !fits(!want) ? want : !want
+    // Preferred side if it fits; else the other if that fits; else (a very
+    // narrow phone, ~320px) whichever side has more room.
+    const side = fits(want) ? want : fits(!want) ? !want : x > vw - x
     setFlip(side !== want)
+    // If even that side runs off-screen, slide the label back in over its own
+    // leader. Margins, not `translate`: GSAP resets `translate` to none when it
+    // animates the label. Both are in the button's scaled space, so ÷ scale.
+    const scale = shown / label.offsetWidth
+    const over = side ? 8 - (x - reach) : x + reach - (vw - 8)
+    const tx = over > 0 ? ((side ? 1 : -1) * over) / scale : 0
+    // Same for the top edge: the label rides 118px above its anchor, which on
+    // a phone held sideways put the rooftop label above the screen.
+    const overTop = 8 - (el.getBoundingClientRect().top - 118 * scale)
+    const ty = overTop > 0 ? overTop / scale : 0
+    label.style.marginLeft = tx ? `${tx}px` : ''
+    label.style.marginTop = ty ? `${ty}px` : ''
   }, [spot, canvasRef])
 
   useEffect(() => {
@@ -824,7 +839,12 @@ const Landing = ({ onView, onPoint }) => {
   // rested orbit frame — including the menu frame — so it reads as a landing
   // and not a bare menu screen. Hidden only while turning or inside a mode.
   const chromeVisible = ready && !exiting && mode === 'none' && activeFrame != null
-  const backVisible = ready && !exiting && mode !== 'none' && !floorDetail.open
+  // Also up when the visitor has dragged the tower off the menu frame: the
+  // menu only lives on that one frame, and without this a drag (the first
+  // thing anyone does on a touchscreen) left no way back but dragging home.
+  // exitMode turns the tower back to START_INDEX either way.
+  const offMenu = mode === 'none' && activeFrame != null && activeFrame !== START_INDEX
+  const backVisible = ready && !exiting && (mode !== 'none' || offMenu) && !floorDetail.open
   // A standing Enquire CTA — up on the orbit and the menu frame, tucked away
   // inside the focused Amenities / Floorplan modes.
   const ctaVisible = ready && !exiting && mode === 'none'
@@ -1202,6 +1222,9 @@ const Landing = ({ onView, onPoint }) => {
           aria-hidden="true"
           className={[
             'pointer-events-none absolute left-1/2 bottom-8 flex  -translate-x-1/2 -translate-y-1/2',
+            // On phones the hero block (bottom-left) spans most of the width,
+            // and the hint sat on top of "Zenith". Lift it above the block.
+            'max-sm:bottom-36',
             'items-center gap-3 rounded-full px-4 py-2',
             'glass-surface text-ink shadow-[0_14px_40px_-18px_rgb(0_0_0/0.7)]',
             'transition-opacity duration-500',

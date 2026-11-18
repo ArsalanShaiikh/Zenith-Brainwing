@@ -38,7 +38,7 @@ const UnitGrid = ({ results, compare, toggleCompare, compareFull, onZoom, onRese
             <label
               onClick={(e) => e.stopPropagation()}
               title={inCompare ? 'Remove from compare' : 'Add to compare'}
-              className="absolute left-2 top-2 z-10 grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-ink/15 bg-paper/90 [backdrop-filter:blur(4px)]"
+              className="absolute left-2 top-2 z-10 grid h-7 w-7 cursor-pointer place-items-center rounded-full border border-ink/15 bg-paper/90 [backdrop-filter:blur(4px)] coarse:h-10 coarse:w-10"
             >
               <input
                 type="checkbox"

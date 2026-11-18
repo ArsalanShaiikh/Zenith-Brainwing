@@ -23,6 +23,7 @@ import UnitGrid from './UnitGrid'
 import PlanZoom from './PlanZoom'
 import UnitCompare from './UnitCompare'
 import IsoWalkthroughModal from './IsoWalkthroughModal'
+import { BRAND_LANE } from '../lib/brandLane'
 import LikeButton from './LikeButton'
 import floorHighlightSvg from '../assets/floor-highlight.svg?raw'
 import floorFrontSvg from '../assets/floor-front.svg?raw'
@@ -352,21 +353,25 @@ const FloorExplorer = ({ open, initialFrame, initialRank, initialPicked, onClose
               button rather than placed. */}
           <div className="mx-auto grid w-full max-w-72 shrink-0 grid-cols-2 gap-0.5 rounded-full border border-ink/12 bg-ink/4 p-0.5 md:max-w-none">
             {[
-              ['visual', 'Visual selection'],
-              ['search', 'Search by unit'],
-            ].map(([key, label]) => (
+              ['visual', 'Visual', ' selection'],
+              ['search', 'Search', ' by unit'],
+            ].map(([key, label, rest]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setMode(key)}
                 aria-pressed={mode === key}
+                aria-label={label + rest}
                 className={[
-                  'truncate rounded-full px-2 py-1.5 text-center text-[9px] uppercase tracking-[0.12em]',
+                  'truncate rounded-full px-2 py-1.5 text-center text-[9px] uppercase tracking-[0.12em] coarse:py-3!',
                   'transition-colors duration-200 lg:text-[10px] lg:tracking-[0.14em]',
                   mode === key ? 'bg-ink text-paper' : 'text-ink-3 hover:text-ink',
                 ].join(' ')}
               >
                 {label}
+                {/* The md column (tablet portrait) is too narrow for the full
+                    labels — they truncated to "Visual se…". */}
+                <span className="md:max-lg:hidden">{rest}</span>
               </button>
             ))}
           </div>
@@ -487,9 +492,16 @@ const FloorExplorer = ({ open, initialFrame, initialRank, initialPicked, onClose
               </div>
 
               <p className="t-label shrink-0 text-center text-ink-3 md:mb-auto">
-                {plan.key === 'typical'
-                  ? 'Hover a floor, click to open — then click a residence on the plan'
-                  : 'Hover a floor, click to open'}
+                <span className="touch:hidden">
+                  {plan.key === 'typical'
+                    ? 'Hover a floor, click to open — then click a residence on the plan'
+                    : 'Hover a floor, click to open'}
+                </span>
+                <span className="hidden touch:inline">
+                  {plan.key === 'typical'
+                    ? 'Tap a floor to open — then tap a residence on the plan'
+                    : 'Tap a floor to open'}
+                </span>
               </p>
             </>
           ) : (
@@ -530,7 +542,7 @@ const FloorExplorer = ({ open, initialFrame, initialRank, initialPicked, onClose
                 type="button"
                 onClick={() => filters.compare.length > 0 && setCompareOpen(true)}
                 disabled={filters.compare.length === 0}
-                className="t-label rounded-full bg-brass px-3 py-1.5 text-void transition-colors duration-200 hover:bg-brass-lift disabled:pointer-events-none disabled:opacity-35"
+                className="t-label rounded-full bg-brass px-3 py-1.5 text-void transition-colors duration-200 hover:bg-brass-lift disabled:pointer-events-none disabled:opacity-35 coarse:px-4 coarse:py-3"
               >
                 Compare {filters.compare.length}/3
               </button>
@@ -659,19 +671,22 @@ const FloorExplorer = ({ open, initialFrame, initialRank, initialPicked, onClose
             </figure>
 
             {/* Specs + CTA. */}
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <dl className="grid grid-cols-3 gap-x-5 gap-y-1">
+            {/* Side by side only from ~1100px: below that (tablet portrait)
+                the three specs and the CTA collided — "Configuration" and
+                "Elevation" printed over each other. */}
+            <div className={`flex flex-col gap-3 min-[1100px]:flex-row min-[1100px]:items-end min-[1100px]:justify-between ${BRAND_LANE}`}>
+              <dl className="grid min-w-0 grid-cols-3 gap-x-5 gap-y-1">
                 {SPECS.map(([k, v]) => (
                   <div key={k} className="flex flex-col gap-0.5">
                     <dt className="t-label text-ink-3">{k}</dt>
-                    <dd className="m-0 text-[12px] font-normal text-ink md:text-[13px]">{v}</dd>
+                    <dd className="m-0 break-words text-[12px] font-normal text-ink md:text-[13px]">{v}</dd>
                   </div>
                 ))}
               </dl>
               <button
                 type="button"
                 onClick={() => onEnquire?.()}
-                className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink md:self-auto md:text-[11px]"
+                className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-ink px-5 py-3 text-[10px] uppercase tracking-[0.16em] text-paper transition-colors duration-200 hover:bg-brass-ink md:text-[11px] min-[1100px]:self-auto"
               >
                 Enquire about this residence
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[1.6]">

@@ -151,7 +151,10 @@ const EntryGate = () => {
       aria-label="Welcome to Runwal Zenith"
       onClick={stage === 'fullscreen' ? onEnterFullscreen : undefined}
       className={[
-        'fixed inset-0 z-200 grid place-content-center place-items-center gap-6 bg-paper px-6 text-ink md:gap-7',
+        'fixed inset-0 z-200 grid place-content-center place-items-center gap-6 overflow-y-auto bg-paper px-6 text-ink md:gap-7',
+        // Phone on its side (≤460px tall): the stacked lockup + form ran the
+        // Continue button off the bottom. Side by side, it all fits.
+        'stubby:grid-flow-col stubby:gap-10 stubby:py-4',
         stage === 'fullscreen' ? 'cursor-pointer' : '',
       ].join(' ')}
       style={{ clipPath: 'inset(0% 0% 0% 0%)' }}
@@ -159,8 +162,8 @@ const EntryGate = () => {
       {/* The lockup. Deliberately the same mark, size and position as the
           landing's loader — this paper wipes off to reveal that one, and a
           logo that shifted between the two would give the seam away. */}
-      <div className="flex flex-col items-center gap-4 text-center md:gap-5">
-        <Logo reveal delay={0.15} width={200} className="w-33 sm:w-37.5 md:w-42 3xl:w-50" />
+      <div className="flex flex-col items-center gap-4 text-center md:gap-5 stubby:gap-2!">
+        <Logo reveal delay={0.15} width={200} className="w-33 sm:w-37.5 md:w-42 3xl:w-50 stubby:w-24!" />
         <div className="flex flex-col items-center gap-1">
           <span className="font-fine text-[clamp(38px,min(8vw,11vh),88px)] leading-none tracking-[-0.02em]">
             Zenith

@@ -72,6 +72,9 @@ const BrandMark = () => {
 
   return (
     <div
+      // index.css hides this while any modal (aria-modal) is open — plan zoom,
+      // compare, walkthrough, panoramas, QR — where it sat over their controls.
+      data-brand-mark
       className={[
         'pointer-events-none fixed bottom-0 right-0 z-150',
         INSET_X,
