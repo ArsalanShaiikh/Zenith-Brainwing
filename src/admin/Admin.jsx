@@ -3,6 +3,7 @@ import { supabase, supabaseConfigured } from '../lib/supabase'
 import AdminLogin from './AdminLogin'
 import Heatmap from './Heatmap'
 import VisitorLocation from './VisitorLocation'
+import Enquiries from './Enquiries'
 import VisitorMap from './VisitorMap'
 
 /* =========================================================
@@ -2094,6 +2095,34 @@ const AdminDashboard = () => {
           </div>
 
           <Heatmap />
+        </section>
+
+        {/* ================================================= */}
+        {/* ENQUIRIES (leads from the Enquire form)          */}
+        {/* ================================================= */}
+
+        <section className="mt-8 border border-white/[0.07] bg-[#11100e] p-5 md:p-7">
+          <div className="mb-7 flex items-end justify-between">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-white/30">
+                Leads
+              </p>
+
+              <h2 className="mt-2 font-serif text-2xl font-light">
+                Enquiries
+              </h2>
+
+              <p className="mt-2 text-[11px] text-white/35">
+                Everyone who sent the Enquire form, newest first
+              </p>
+            </div>
+
+            <span className="hidden text-[9px] uppercase tracking-[0.15em] text-white/20 sm:block">
+              Supabase
+            </span>
+          </div>
+
+          <Enquiries />
         </section>
 
         {/* ================================================= */}
