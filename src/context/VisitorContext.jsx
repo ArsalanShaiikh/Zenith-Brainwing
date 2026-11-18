@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { VisitorContext } from './visitorContextObject'
+import { isFullscreen } from '../lib/fullscreen'
 
 /**
  * The visitor session — who is being shown the tower, and what they marked.
@@ -21,6 +22,11 @@ const KEY = 'zenith.visitor.v1'
 const STAGES = ['fullscreen', 'name', 'welcome', 'done']
 
 const EMPTY = { name: '', stage: 'fullscreen', saved: [] }
+
+/** The anonymous analytics id (lib/analytics.js, lib/geo.js) and the
+ *  once-per-visitor location flag. Dropped on "New visitor" so the next
+ *  person counts as a visitor of their own, not as more of the last one. */
+const ANALYTICS_KEYS = ['zenith_visitor_id', 'zenith_geo_attempted']
 
 /** A saved record needs these to survive into the PDF; anything short of that
  *  is a stale shape from an older build and gets dropped. */
@@ -44,6 +50,10 @@ const read = () => {
 
 export const VisitorProvider = ({ children }) => {
   const [state, setState] = useState(read)
+  // Bumped by resetVisitor. App keys everything behind the provider on it, so
+  // a new visitor gets freshly mounted views — no filters, compare picks,
+  // gallery position or half-typed enquiry left over from the last one.
+  const [visit, setVisit] = useState(0)
 
   // Write-through. Private-mode Safari throws on setItem with a full quota, and
   // a failed save must never take the app down with it.
@@ -75,6 +85,23 @@ export const VisitorProvider = ({ children }) => {
     })
   }, [])
 
+  /**
+   * Hand the kiosk to the next person: forget the name and every marked item,
+   * start a new analytics visitor, and put the entry gate back up. Full screen
+   * is kept when it's still held (the gate opens on the name, not on the full
+   * screen ask), so a sales host can do this between visitors without the
+   * screen jumping out of full screen.
+   */
+  const resetVisitor = useCallback(() => {
+    try {
+      ANALYTICS_KEYS.forEach((k) => sessionStorage.removeItem(k))
+    } catch {
+      /* storage unavailable — the next visitor shares the old analytics id */
+    }
+    setState({ ...EMPTY, stage: isFullscreen() ? 'name' : 'fullscreen' })
+    setVisit((v) => v + 1)
+  }, [])
+
   const savedIds = useMemo(() => new Set(state.saved.map((r) => r.id)), [state.saved])
   const isSaved = useCallback((id) => savedIds.has(id), [savedIds])
 
@@ -89,8 +116,10 @@ export const VisitorProvider = ({ children }) => {
       toggleSave,
       setStage,
       setName,
+      visit,
+      resetVisitor,
     }),
-    [state, isSaved, toggleSave, setStage, setName],
+    [state, isSaved, toggleSave, setStage, setName, visit, resetVisitor],
   )
 
   return <VisitorContext.Provider value={value}>{children}</VisitorContext.Provider>

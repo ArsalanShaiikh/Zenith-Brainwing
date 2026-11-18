@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 
 import { ViewProvider } from './context/ViewContext'
 import { VisitorProvider } from './context/VisitorContext'
+import { useVisitor } from './hooks/useVisitor'
 import { VIEWS } from './lib/views'
 import { initHeatmapTracking } from './lib/analytics'
 import { flushPendingEnquiries } from './lib/enquiries'
@@ -122,6 +123,16 @@ const AppRoutes = () => {
   )
 }
 
+/**
+ * Everything that belongs to one visitor, remounted from scratch when the
+ * kiosk's "New visitor" is pressed (VisitorContext's `visit` changes). That's
+ * what clears all the per-visit state held inside the views themselves.
+ */
+const VisitScope = ({ children }) => {
+  const { visit } = useVisitor()
+  return <ViewProvider key={visit}>{children}</ViewProvider>
+}
+
 const App = () => {
   // One global capturing click listener for the whole app's lifetime — this
   // is the single place website-interaction heatmap clicks are captured, so
@@ -141,7 +152,7 @@ const App = () => {
 
   return (
     <VisitorProvider>
-      <ViewProvider>
+      <VisitScope>
         <AppRoutes />
 
         {!isAdmin && (
@@ -152,7 +163,7 @@ const App = () => {
             <FullscreenGuard />
           </>
         )}
-      </ViewProvider>
+      </VisitScope>
     </VisitorProvider>
   )
 }

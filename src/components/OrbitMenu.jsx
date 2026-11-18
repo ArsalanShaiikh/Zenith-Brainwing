@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap, useGSAP, prefersReducedMotion } from '../Gsapconfig'
 import { MENU_ITEMS } from '../lib/views'
+import { useVisitor } from '../hooks/useVisitor'
 import DownloadSelection from './DownloadSelection'
 
 /** Per-row copy. Same figures as the old menu page — the sheet no longer swaps
@@ -20,6 +21,89 @@ const FACTS = [
   ['Config', '3 BHK'],
   ['Possession', '2029'],
 ]
+
+/** How long "Start fresh?" waits for an answer before it backs off by itself. */
+const CONFIRM_DWELL = 6000
+
+/**
+ * The kiosk hand-over: a sales host taps this between visitors and the next
+ * person starts at the name screen with an empty selection.
+ *
+ * Two taps, not one — it throws away someone's marked residences, and it sits
+ * on a touchscreen people lean on. The first tap only asks; the question backs
+ * off on its own if nobody answers, and whenever the menu closes.
+ */
+const NewVisitor = ({ show }) => {
+  const { name, savedCount, resetVisitor } = useVisitor()
+  const [asking, setAsking] = useState(false)
+
+  useEffect(() => {
+    if (!asking) return undefined
+    const t = setTimeout(() => setAsking(false), CONFIRM_DWELL)
+    return () => clearTimeout(t)
+  }, [asking])
+
+  // The menu sliding away (a mode picked, the tower dragged) drops the question.
+  const [shownFor, setShownFor] = useState(show)
+  if (shownFor !== show) {
+    setShownFor(show)
+    if (!show) setAsking(false)
+  }
+
+  const small = 'text-[9px] uppercase tracking-[0.14em] lg:text-[clamp(9px,0.45vw,12px)]'
+  const tap = 'rounded-full px-2.5 py-1.5 coarse:px-3.5 coarse:py-2.5 transition-colors duration-200'
+
+  return (
+    <div
+      data-new-visitor
+      className="mt-2 flex min-h-8 items-center justify-between gap-2 border-t border-ink/14 pt-2 lg:mt-[clamp(8px,0.55vw,15px)] lg:pt-[clamp(8px,0.55vw,15px)] short:mt-1 short:pt-1"
+    >
+      {asking ? (
+        <>
+          <span className={`min-w-0 truncate text-ink-2 ${small}`} role="status">
+            {savedCount ? `Clear ${savedCount} marked?` : 'Start fresh?'}
+          </span>
+          <span className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setAsking(false)}
+              className={`${tap} ${small} text-ink-3 hover:text-ink`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={resetVisitor}
+              className={`${tap} ${small} bg-ink text-paper hover:bg-brass-ink`}
+            >
+              Start fresh
+            </button>
+          </span>
+        </>
+      ) : (
+        <>
+          <span className={`min-w-0 truncate text-ink-3 ${small}`}>
+            {name ? <>Visiting &middot; <span className="text-ink-2">{name}</span></> : 'Visiting'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAsking(true)}
+            className={`group -mr-1 flex shrink-0 items-center gap-1.5 text-ink-3 hover:text-ink ${tap} ${small}`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="h-3 w-3 fill-none stroke-current stroke-[1.6] transition-transform duration-500 ease-zenith group-hover:-rotate-90 lg:h-[clamp(12px,0.7vw,17px)] lg:w-[clamp(12px,0.7vw,17px)]"
+            >
+              <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" />
+            </svg>
+            New visitor
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 /**
  * The menu, now living *on* the orbit rather than on its own screen. It sits on
@@ -155,7 +239,7 @@ const OrbitMenu = ({ show, onSelect }) => {
             ))}
           </ul>
 
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-ink/14 pt-2.5 sm:grid-cols-4 lg:pt-[clamp(9px,0.65vw,17px)] short:hidden">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-ink/14 pt-2.5 min-[360px]:grid-cols-4 lg:pt-[clamp(9px,0.65vw,17px)] short:hidden">
             {FACTS.map(([k, val]) => (
               <div key={k} className="flex flex-col">
                 <span className="text-[8px] uppercase leading-none tracking-[0.14em] text-ink-3 lg:text-[clamp(8px,0.4vw,11px)]">
@@ -167,6 +251,8 @@ const OrbitMenu = ({ show, onSelect }) => {
               </div>
             ))}
           </div>
+
+          <NewVisitor show={show} />
         </div>
       </div>
     </div>

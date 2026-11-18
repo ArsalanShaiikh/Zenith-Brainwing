@@ -1223,8 +1223,11 @@ const Landing = ({ onView, onPoint }) => {
           className={[
             'pointer-events-none absolute left-1/2 bottom-8 flex  -translate-x-1/2 -translate-y-1/2',
             // On phones the hero block (bottom-left) spans most of the width,
-            // and the hint sat on top of "Zenith". Lift it above the block.
-            'max-sm:bottom-36',
+            // and the hint sat on top of "Zenith". Lift it above the block —
+            // into the gap under the menu. Short phones (<800px tall) have no
+            // such gap: the hint could only sit under the menu's glass, so
+            // it's dropped there.
+            'max-sm:bottom-28 max-sm:[@media(max-height:799px)]:hidden',
             'items-center gap-3 rounded-full px-4 py-2',
             'glass-surface text-ink shadow-[0_14px_40px_-18px_rgb(0_0_0/0.7)]',
             'transition-opacity duration-500',
